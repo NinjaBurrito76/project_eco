@@ -197,7 +197,7 @@ html, body {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
   display: flex; align-items: center; gap: 10px;
   padding: calc(var(--safe-top) + 10px) 12px 10px;
-  background: linear-gradient(180deg, #000000bb 0%, transparent 100%);
+  background: #0a1a0f; border-bottom: 1px solid var(--c-border);
 }
 .btn-exit-battle {
   flex-shrink: 0; width: 36px; height: 36px;
@@ -254,8 +254,7 @@ html, body {
 /* Bottom panel */
 #battle-bottom {
   position: absolute; bottom: 0; left: 0; right: 0; z-index: 10;
-  background: #0a1a0fdd; border-top: 1px solid var(--c-border);
-  backdrop-filter: blur(8px);
+  background: #0a1a0f; border-top: 1px solid var(--c-border);
 }
 #battle-info-row {
   display: flex; align-items: stretch;
@@ -576,6 +575,8 @@ html, body {
   <div id="screen-battle" class="screen">
     <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
+
+    <!-- TOP: enemy HP bar pinned to top -->
     <div id="hud-top">
       <button class="btn-exit-battle" onclick="UI.exitBattle()">✕</button>
       <div class="hud-enemy-block">
@@ -588,12 +589,16 @@ html, body {
       </div>
       <div id="hud-turn-badge">YOUR TURN</div>
     </div>
+
+    <!-- MIDDLE: monster floats in camera view -->
     <div id="enemy-stage">
       <div id="enemy-model-wrap"><div id="enemy-model"></div></div>
       <div id="enemy-shadow"></div>
       <div id="enemy-name-tag"></div>
     </div>
     <div id="effects-layer"></div>
+
+    <!-- BOTTOM: guardian info + log + buttons pinned to bottom -->
     <div id="battle-bottom">
       <div id="battle-info-row">
         <div id="hud-guardian">
