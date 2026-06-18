@@ -316,7 +316,8 @@ html, body {
    SHARED PANEL STYLES
 ══════════════════════════════════════════════════════════ */
 .panel-screen { flex-direction: column; overflow: hidden; }
-.panel-screen .tab-content { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; padding: 14px 16px calc(14px + var(--safe-bottom)); }
+.panel-screen .tab-content { display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; padding: 14px 16px calc(14px + var(--safe-bottom)); }
+.panel-screen .tab-content.active { display: block; }
 
 .panel-header {
   flex-shrink: 0; display: flex; align-items: center; gap: 14px;
@@ -529,11 +530,131 @@ html, body {
   backdrop-filter: blur(8px);
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Battle UI visibility — controlled by JS */
+#hud-top, #battle-bottom {
+  display: none;
+}
+#hud-top.battle-active, #battle-bottom.battle-active {
+  display: flex;
+}
+
+/* ══════════════════════════════════════════════════════════
+   TUTORIAL SCREEN
+══════════════════════════════════════════════════════════ */
+#screen-tutorial {
+  align-items: center;
+  justify-content: flex-start;
+  background: var(--c-bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(var(--safe-top) + 20px) 24px calc(var(--safe-bottom) + 24px);
+}
+
+.tutorial-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.tutorial-icon { font-size: 3.5rem; margin-bottom: 10px; }
+
+.tutorial-title {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--c-green-bright);
+  margin-bottom: 6px;
+}
+
+.tutorial-subtitle {
+  font-size: 0.82rem;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.tutorial-steps {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.tutorial-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+}
+
+.tutorial-step-num {
+  width: 32px; height: 32px;
+  background: var(--c-green-dark);
+  border: 2px solid var(--c-green-bright);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem; font-weight: 800;
+  color: var(--c-green-bright);
+  flex-shrink: 0;
+}
+
+.tutorial-step-body { flex: 1; }
+
+.tutorial-step-title {
+  font-weight: 700;
+  font-size: 0.92rem;
+  margin-bottom: 4px;
+  color: var(--c-text);
+}
+
+.tutorial-step-desc {
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  line-height: 1.5;
+}
+
+.tutorial-step-icon { font-size: 1.6rem; flex-shrink: 0; }
+
+.tutorial-starter-box {
+  width: 100%;
+  background: var(--c-green-dark);
+  border: 1px solid var(--c-green-bright);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.tutorial-starter-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--c-green-bright);
+  margin-bottom: 10px;
+}
+
+.tutorial-starter-items {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.tutorial-starter-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tutorial-starter-item span:first-child { font-size: 1.8rem; }
+.tutorial-starter-item span:last-child  { font-size: 0.75rem; color: var(--c-text); font-weight: 600; }
   </style>
 </head>
 <body>
 
-  <!-- TITLE -->
   <div id="screen-title" class="screen active">
     <div class="title-bg"></div>
     <div class="title-content">
@@ -544,7 +665,56 @@ html, body {
     </div>
   </div>
 
-  <!-- HUB -->
+  <div id="screen-tutorial" class="screen">
+    <div class="tutorial-header">
+      <div class="tutorial-icon">🌿</div>
+      <div class="tutorial-title">Welcome, Guardian</div>
+      <div class="tutorial-subtitle">The world is full of wild plant-monsters.<br>Capture them, raise them, and protect nature.</div>
+    </div>
+    <div class="tutorial-starter-box">
+      <div class="tutorial-starter-label">Your Starter Kit</div>
+      <div class="tutorial-starter-items">
+        <div class="tutorial-starter-item"><span>🌰</span><span>Pitcher Seed ×1</span></div>
+        <div class="tutorial-starter-item"><span>💧</span><span>Water ×3</span></div>
+      </div>
+    </div>
+    <div class="tutorial-steps">
+      <div class="tutorial-step">
+        <div class="tutorial-step-num">1</div>
+        <div class="tutorial-step-body">
+          <div class="tutorial-step-title">Go to Garden → Hatchery</div>
+          <div class="tutorial-step-desc">You have a Pitcher Seed waiting. Head to your Garden and open the Hatchery tab.</div>
+        </div>
+        <div class="tutorial-step-icon">🌱</div>
+      </div>
+      <div class="tutorial-step">
+        <div class="tutorial-step-num">2</div>
+        <div class="tutorial-step-body">
+          <div class="tutorial-step-title">Hatch your seed</div>
+          <div class="tutorial-step-desc">Use your 3 💧 Water to hatch the Pitcher Seed into a Pitcher-Knight Guardian.</div>
+        </div>
+        <div class="tutorial-step-icon">🥚</div>
+      </div>
+      <div class="tutorial-step">
+        <div class="tutorial-step-num">3</div>
+        <div class="tutorial-step-body">
+          <div class="tutorial-step-title">Deploy your Guardian</div>
+          <div class="tutorial-step-desc">Go to the Team tab and tap Deploy to send your Guardian into battle.</div>
+        </div>
+        <div class="tutorial-step-icon">⚔️</div>
+      </div>
+      <div class="tutorial-step">
+        <div class="tutorial-step-num">4</div>
+        <div class="tutorial-step-body">
+          <div class="tutorial-step-title">Enter Battle</div>
+          <div class="tutorial-step-desc">Fight wild monsters! Weaken them then Capture to collect more seeds. Feed your Guardian ☀️ Sunlight to level up.</div>
+        </div>
+        <div class="tutorial-step-icon">🌍</div>
+      </div>
+    </div>
+    <button class="btn-begin" onclick="Game.finishTutorial()">Let's Go! →</button>
+  </div>
+
   <div id="screen-hub" class="screen">
     <div class="hub-header">
       <div class="hub-title">ECO GUARDIAN</div>
@@ -571,52 +741,52 @@ html, body {
     </div>
   </div>
 
-  <!-- BATTLE -->
   <div id="screen-battle" class="screen">
     <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
-    <div id="hud-top">
-      <button class="btn-exit-battle" onclick="UI.exitBattle()">✕</button>
-      <div class="hud-enemy-block">
-        <span id="hud-enemy-name">—</span>
-        <div class="hp-bar-wrap">
-          <div class="hp-bar-label">HP</div>
-          <div class="hp-bar-track"><div id="enemy-hp-bar" class="hp-bar-fill enemy" style="width:100%"></div></div>
-          <span id="enemy-hp-text">—</span>
-        </div>
-      </div>
-      <div id="hud-turn-badge">YOUR TURN</div>
-    </div>
     <div id="enemy-stage">
       <div id="enemy-model-wrap"><div id="enemy-model"></div></div>
       <div id="enemy-shadow"></div>
       <div id="enemy-name-tag"></div>
     </div>
     <div id="effects-layer"></div>
-    <div id="battle-bottom">
-      <div id="battle-info-row">
-        <div id="hud-guardian">
-          <div id="guardian-sprite-wrap"><div id="guardian-sprite">🌿</div></div>
-          <div id="guardian-info">
-            <span id="guardian-name">No Guardian</span>
-            <div class="hp-bar-wrap mini">
-              <div class="hp-bar-label">HP</div>
-              <div class="hp-bar-track"><div id="guardian-hp-bar" class="hp-bar-fill guardian" style="width:0%"></div></div>
-              <span id="guardian-hp-text">—</span>
-            </div>
-            <span id="guardian-level-tag">Lv —</span>
+  </div>
+
+  <div id="hud-top">
+    <button class="btn-exit-battle" onclick="UI.exitBattle()">✕</button>
+    <div class="hud-enemy-block">
+      <span id="hud-enemy-name">—</span>
+      <div class="hp-bar-wrap">
+        <div class="hp-bar-label">HP</div>
+        <div class="hp-bar-track"><div id="enemy-hp-bar" class="hp-bar-fill enemy" style="width:100%"></div></div>
+        <span id="enemy-hp-text">—</span>
+      </div>
+    </div>
+    <div id="hud-turn-badge">YOUR TURN</div>
+  </div>
+
+  <div id="battle-bottom">
+    <div id="battle-info-row">
+      <div id="hud-guardian">
+        <div id="guardian-sprite-wrap"><div id="guardian-sprite">🌿</div></div>
+        <div id="guardian-info">
+          <span id="guardian-name">No Guardian</span>
+          <div class="hp-bar-wrap mini">
+            <div class="hp-bar-label">HP</div>
+            <div class="hp-bar-track"><div id="guardian-hp-bar" class="hp-bar-fill guardian" style="width:0%"></div></div>
+            <span id="guardian-hp-text">—</span>
           </div>
+          <span id="guardian-level-tag">Lv —</span>
         </div>
-        <div id="battle-log-box"><p id="battle-log-text">A monster appears!</p></div>
       </div>
-      <div id="action-bar">
-        <button class="btn-action" id="btn-attack"  onclick="Battle.playerAttack()">⚔️ Attack</button>
-        <button class="btn-action" id="btn-capture" onclick="Battle.attemptCapture()">🌱 Capture</button>
-      </div>
+      <div id="battle-log-box"><p id="battle-log-text">A monster appears!</p></div>
+    </div>
+    <div id="action-bar">
+      <button class="btn-action" id="btn-attack"  onclick="Battle.playerAttack()">⚔️ Attack</button>
+      <button class="btn-action" id="btn-capture" onclick="Battle.attemptCapture()">🌱 Capture</button>
     </div>
   </div>
 
-  <!-- RESULT -->
   <div id="screen-result" class="screen">
     <div id="result-content">
       <h2 id="result-title">Victory!</h2>
@@ -628,21 +798,19 @@ html, body {
     </div>
   </div>
 
-  <!-- GARDEN -->
   <div id="screen-garden" class="screen panel-screen">
     <div class="panel-header">
       <button class="btn-back" onclick="UI.closeToHub()">← Back</button>
       <h2>Garden</h2>
     </div>
     <div id="garden-tabs">
-      <button class="tab active" data-tab="team"    onclick="UI.switchGardenTab('team')">🌿 Team</button>
-      <button class="tab"        data-tab="hatchery" onclick="UI.switchGardenTab('hatchery')">🥚 Hatchery</button>
+      <button class="tab active" data-tab="team"     onclick="UI.switchGardenTab('team')">🌿 Team</button>
+      <button class="tab"        data-tab="hatchery"  onclick="UI.switchGardenTab('hatchery')">🥚 Hatchery</button>
     </div>
     <div id="garden-tab-team"     class="tab-content active"><div id="garden-team-list"></div></div>
     <div id="garden-tab-hatchery" class="tab-content">       <div id="garden-hatch-list"></div></div>
   </div>
 
-  <!-- GUARDIAN DETAIL -->
   <div id="screen-guardian-detail" class="screen panel-screen">
     <div class="panel-header">
       <button class="btn-back" onclick="UI.closeDetail()">← Back</button>
@@ -658,7 +826,6 @@ html, body {
     <div id="detail-tab-feed" class="tab-content"></div>
   </div>
 
-  <!-- INVENTORY -->
   <div id="screen-inventory" class="screen panel-screen">
     <div class="panel-header">
       <button class="btn-back" onclick="UI.closeToHub()">← Back</button>
@@ -755,32 +922,28 @@ const DATA = {
 const State = (() => {
 
   const _state = {
-    // Inventory: { itemId: count }
+    // Start with a seed and enough water to hatch it — tutorial setup
     inventory: {
-      water: 5,
-      sunlight: 3,
+      water:               3,   // exactly enough to hatch
+      seed_pitcher_knight: 1,   // one starter seed
     },
 
-    // Seeds waiting to hatch: [ { seedItemId, monsterId } ]
-    seeds: [],
+    seeds: [
+      { seedItemId: 'seed_pitcher_knight', monsterId: 'pitcher_knight' }
+    ],
 
-    // Active guardians: [ Guardian instance ]
     guardians: [],
-
-    // Currently selected guardian index for battle (null = none)
     activeGuardianIndex: null,
-
-    // Battle state
-    battle: null,    // filled by Battle module
-
-    // Encounter counter
+    battle: null,
     encounterCount: 0,
+
+    // Tutorial state
+    tutorialDone: false,
   };
 
   return {
     get: () => _state,
 
-    // ── Inventory helpers ──────────────────────────────────
     addItem(itemId, qty = 1) {
       _state.inventory[itemId] = (_state.inventory[itemId] || 0) + qty;
     },
@@ -799,9 +962,9 @@ const State = (() => {
       return _state.inventory[itemId] || 0;
     },
 
-    // ── Seed helpers ───────────────────────────────────────
     addSeed(seedItemId) {
       const itemDef = DATA.items[seedItemId];
+      if (!itemDef) return;
       _state.seeds.push({ seedItemId, monsterId: itemDef.monsterId });
     },
 
@@ -809,7 +972,6 @@ const State = (() => {
       _state.seeds.splice(index, 1);
     },
 
-    // ── Guardian helpers ───────────────────────────────────
     addGuardian(guardian) {
       _state.guardians.push(guardian);
       if (_state.activeGuardianIndex === null) _state.activeGuardianIndex = 0;
@@ -824,6 +986,10 @@ const State = (() => {
       if (index >= 0 && index < _state.guardians.length) {
         _state.activeGuardianIndex = index;
       }
+    },
+
+    completeTutorial() {
+      _state.tutorialDone = true;
     },
   };
 })();
@@ -1143,7 +1309,6 @@ const Battle = (() => {
   let _playerTurn = true;
   let _busy       = false;
 
-  // ── Start a new battle ─────────────────────────────────────
   function start(monsterId, level = 1) {
     _enemy      = new Monster(monsterId, level);
     _guardian   = State.getActiveGuardian();
@@ -1154,32 +1319,21 @@ const Battle = (() => {
 
     _renderEnemy();
     _updateAllHUD();
-
-    if (!_guardian) {
-      _log(`A wild ${_enemy.name} appeared! No guardian — fight bare-handed or try to capture!`);
-    } else {
-      _log(`A wild ${_enemy.name} (Lv ${_enemy.level}) appeared!`);
-    }
-
+    _log(`A wild ${_enemy.name} (Lv ${_enemy.level}) appeared!`);
     _setActionButtons(true);
   }
 
   // ── Player: Attack ─────────────────────────────────────────
   function playerAttack() {
     if (!_playerTurn || _busy) return;
+    if (!_guardian) {
+      UI.toast('No guardian! Go to Garden and hatch your seed first.');
+      return;
+    }
     _busy = true;
 
-    let dmg;
-    if (_guardian) {
-      dmg = _guardian.attackTarget(_enemy);
-      _log(`${_guardian.name} attacks! ${_enemy.name} takes ${dmg} damage.`);
-    } else {
-      // Bare-hands "Struggle" — always available, deals fixed low damage
-      dmg = Math.max(1, 5 + Math.floor(Math.random() * 6));
-      _enemy.takeDamage(dmg);
-      _log(`You struggle bare-handed! ${_enemy.name} takes ${dmg} damage.`);
-    }
-
+    const dmg = _guardian.attackTarget(_enemy);
+    _log(`${_guardian.name} attacks! ${_enemy.name} takes ${dmg} damage.`);
     _playHitEffect('enemy');
     _updateAllHUD();
 
@@ -1193,16 +1347,18 @@ const Battle = (() => {
   // ── Player: Capture ────────────────────────────────────────
   function attemptCapture() {
     if (!_playerTurn || _busy) return;
+    if (!_guardian) {
+      UI.toast('No guardian! Go to Garden and hatch your seed first.');
+      return;
+    }
     _busy = true;
 
     const chance = DATA.captureChance(_enemy, _enemy.currentHp);
-    const roll   = Math.random();
-
     _log(`You throw a seed net! (${Math.round(chance * 100)}% chance…)`);
     _playCaptureEffect();
 
     setTimeout(() => {
-      if (roll < chance) {
+      if (Math.random() < chance) {
         _log(`Gotcha! ${_enemy.name} was captured! Seed added.`);
         const seedId = `seed_${_enemy.monsterId}`;
         State.addSeed(seedId);
@@ -1221,18 +1377,7 @@ const Battle = (() => {
   // ── Enemy turn ─────────────────────────────────────────────
   function _enemyTurn() {
     if (!_enemy || !_enemy.isAlive()) return;
-
-    // If no guardian, enemy attacks the player directly (player has a virtual HP pool)
-    if (!_guardian) {
-      // Player takes damage — reflected as a log message; no HP bar crash
-      const dmg = Math.max(1, _enemy.attack - 2 + Math.floor(Math.random() * 4));
-      _log(`${_enemy.name} attacks you! You take ${dmg} damage. Weaken it to capture!`);
-      _playHitEffect('guardian');
-      _playerTurn = true;
-      _busy       = false;
-      _setActionButtons(true);
-      return;
-    }
+    if (!_guardian) return;
 
     const dmg = _enemy.attackTarget(_guardian);
     _log(`${_enemy.name} attacks! ${_guardian.name} takes ${dmg} damage.`);
@@ -1250,14 +1395,11 @@ const Battle = (() => {
     _setActionButtons(true);
   }
 
-  // ── Enemy defeated ─────────────────────────────────────────
   function _onEnemyDefeated() {
     const drops = _enemy.rollDrops();
     for (const d of drops) {
       State.addItem(d.itemId, d.qty);
-      if (DATA.items[d.itemId] && DATA.items[d.itemId].type === 'seed') {
-        State.addSeed(d.itemId);
-      }
+      if (DATA.items[d.itemId]?.type === 'seed') State.addSeed(d.itemId);
     }
     _log(`${_enemy.name} was defeated!`);
     setTimeout(() => _endBattle('victory', drops), 600);
@@ -1271,10 +1413,7 @@ const Battle = (() => {
   }
 
   // ── HUD ────────────────────────────────────────────────────
-  function _updateAllHUD() {
-    _updateEnemyHUD();
-    _updateGuardianHUD();
-  }
+  function _updateAllHUD() { _updateEnemyHUD(); _updateGuardianHUD(); }
 
   function _updateEnemyHUD() {
     if (!_enemy) return;
@@ -1288,11 +1427,11 @@ const Battle = (() => {
   function _updateGuardianHUD() {
     const g = _guardian;
     if (!g) {
-      document.getElementById('guardian-name').textContent     = 'No Guardian';
-      document.getElementById('guardian-hp-text').textContent  = '—';
+      document.getElementById('guardian-name').textContent      = 'No Guardian';
+      document.getElementById('guardian-hp-text').textContent   = '—';
       document.getElementById('guardian-level-tag').textContent = 'Lv —';
-      document.getElementById('guardian-hp-bar').style.width   = '0%';
-      document.getElementById('guardian-sprite').textContent   = '🌿';
+      document.getElementById('guardian-hp-bar').style.width    = '0%';
+      document.getElementById('guardian-sprite').textContent    = '🌿';
       return;
     }
     const pct = (g.currentHp / g.maxHp) * 100;
@@ -1343,9 +1482,7 @@ const Battle = (() => {
   }
 
   return {
-    start,
-    playerAttack,
-    attemptCapture,
+    start, playerAttack, attemptCapture,
     refreshGuardian() {
       _guardian = State.getActiveGuardian();
       _updateGuardianHUD();
@@ -1359,11 +1496,20 @@ const Battle = (() => {
 const UI = (() => {
 
   // ── Screen routing ────────────────────────────────────────
+  function _setBattleUI(visible) {
+    const top = document.getElementById('hud-top');
+    const bot = document.getElementById('battle-bottom');
+    if (top) top.classList.toggle('battle-active', visible);
+    if (bot) bot.classList.toggle('battle-active', visible);
+  }
+
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const el = document.getElementById(id);
     if (el) el.classList.add('active');
     if (id === 'screen-hub') _updateHub();
+    // Hide battle UI on any screen except battle
+    if (id !== 'screen-battle') _setBattleUI(false);
   }
 
   function _updateHub() {
@@ -1395,7 +1541,15 @@ const UI = (() => {
   }
 
   // ── Garden ────────────────────────────────────────────────
-  function _renderGarden() { _renderTeam(); _renderHatchery(); }
+  function _renderGarden() {
+    _renderTeam();
+    _renderHatchery();
+    // Ensure only active tab is visible
+    document.querySelectorAll('#screen-garden .tab-content').forEach(t => t.classList.remove('active'));
+    const activeTab = document.querySelector('#garden-tabs .tab.active');
+    const tabName = activeTab?.dataset?.tab || 'team';
+    document.getElementById(`garden-tab-${tabName}`)?.classList.add('active');
+  }
 
   function _renderTeam() {
     const list   = document.getElementById('garden-team-list');
@@ -1703,8 +1857,9 @@ const UI = (() => {
   }
 
   return {
-    showScreen,
+    showScreen, setBattleUI: _setBattleUI,
     openBattle, openGarden, openInventory, closeToHub, exitBattle,
+    _renderGardenPublic: _renderGarden,
     switchGardenTab,
     hatchSeed, feedGuardian, deployGuardian,
     openGuardianDetail, closeDetail,
@@ -1723,29 +1878,45 @@ const Game = (() => {
     return 1 + Math.floor(State.get().encounterCount / 3);
   }
 
-  // ── Title → Hub ───────────────────────────────────────────
   function startGame() {
+    if (!State.get().tutorialDone) {
+      UI.showScreen('screen-tutorial');
+    } else {
+      UI.showScreen('screen-hub');
+    }
+  }
+
+  function finishTutorial() {
+    State.completeTutorial();
     UI.showScreen('screen-hub');
   }
 
-  // ── Hub → Battle (starts camera) ─────────────────────────
   function enterBattle() {
+    if (!State.getActiveGuardian()) {
+      UI.showScreen('screen-garden');
+      UI.switchGardenTab('hatchery');
+      UI._renderGardenPublic();
+      UI.toast('🌱 Hatch your seed first! Use your 3 💧 Water.');
+      return;
+    }
+
     _startCamera().then(() => {
       UI.showScreen('screen-battle');
+      UI.setBattleUI(true);
       _newEncounter();
     });
   }
 
-  // ── Leave battle (stops camera) ──────────────────────────
   function exitBattle() {
     _stopCamera();
+    UI.setBattleUI(false);
     UI.showScreen('screen-hub');
   }
 
-  // ── Cycle to next encounter ───────────────────────────────
   function nextEncounter() {
     State.get().encounterCount++;
     UI.showScreen('screen-battle');
+    UI.setBattleUI(true);
     _newEncounter();
   }
 
@@ -1755,7 +1926,6 @@ const Game = (() => {
     Battle.start(pick, _enemyLevel());
   }
 
-  // ── Camera ────────────────────────────────────────────────
   async function _startCamera() {
     _stopCamera();
     try {
@@ -1765,12 +1935,8 @@ const Game = (() => {
       });
       _cameraStream = stream;
       const vid = document.getElementById('ar-camera');
-      if (vid) {
-        vid.srcObject = stream;
-        vid.play();
-      }
+      if (vid) { vid.srcObject = stream; vid.play(); }
     } catch (e) {
-      // Camera denied or unavailable — green BG fallback is already in CSS
       console.warn('Camera unavailable:', e.message);
     }
   }
@@ -1784,7 +1950,7 @@ const Game = (() => {
     if (vid) vid.srcObject = null;
   }
 
-  return { startGame, enterBattle, exitBattle, nextEncounter };
+  return { startGame, finishTutorial, enterBattle, exitBattle, nextEncounter };
 })();
     UI.switchDetailTab = (tab) => {
       document.querySelectorAll('#detail-tabs .tab').forEach(t => t.classList.remove('active'));
