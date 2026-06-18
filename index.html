@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Eco Guardian</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
 /* ============================================================
    style.css — Eco Guardian  (mobile-first)
@@ -750,11 +751,14 @@ html, body {
     </div>
   </div>
 
+  <!-- BATTLE -->
   <div id="screen-battle" class="screen">
     <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
     <div id="enemy-stage">
-      <div id="enemy-model-wrap"><div id="enemy-model"></div></div>
+      <div id="enemy-model-wrap">
+        <canvas id="monster-canvas"></canvas>
+      </div>
       <div id="enemy-shadow"></div>
       <div id="enemy-name-tag"></div>
     </div>
@@ -894,14 +898,14 @@ const DATA = {
         conservationStatus: 'Vulnerable (some species Critically Endangered)',
         trivia: 'The name Nepenthes comes from Greek mythology — a drug of forgetfulness mentioned in Homer\'s Odyssey.',
       },
-      baseStats: { hp: 120, attack: 14, defense: 8 },
+      baseStats: { hp: 50, attack: 8, defense: 2 },
       dropTable: [
         { itemId: 'water',               rate: 0.80, qty: [1, 3] },
         { itemId: 'sunlight',            rate: 0.50, qty: [1, 2] },
         { itemId: 'seed_pitcher_knight', rate: 0.35, qty: [1, 1] },
       ],
-      captureRate: 0.45,
-      statScale: { hp: 1.10, attack: 1.08, defense: 1.10 },
+      captureRate: 0.55,
+      statScale: { hp: 1.06, attack: 1.05, defense: 1.04 },
       palette: {
         primary: '#4a7c59', secondary: '#2e5c3f',
         armor: '#8b7355', lid: '#5c4a2e',
@@ -1006,35 +1010,26 @@ const State = (() => {
   };
 })();
 // ============================================================
-//  monsters.js — Monster instances + 3D-style SVG renderer
+//  monsters.js — Monster instances + Three.js 3D renderer
 // ============================================================
 
 class Monster {
   constructor(monsterId, level = 1) {
     this.monsterId = monsterId;
-    this.level = level;
-    const def = DATA.monsters[monsterId];
-
-    // Scale stats by level
-    const scale = def.statScale;
+    this.level     = level;
+    const def      = DATA.monsters[monsterId];
+    const scale    = def.statScale;
     this.maxHp     = Math.round(def.baseStats.hp     * Math.pow(scale.hp,     level - 1));
     this.attack    = Math.round(def.baseStats.attack  * Math.pow(scale.attack, level - 1));
     this.defense   = Math.round(def.baseStats.defense * Math.pow(scale.defense,level - 1));
     this.currentHp = this.maxHp;
     this.name      = def.name;
   }
-
-  isAlive() { return this.currentHp > 0; }
-
-  takeDamage(dmg) {
-    this.currentHp = Math.max(0, this.currentHp - dmg);
-  }
-
-  // Roll drops on defeat
+  isAlive()       { return this.currentHp > 0; }
+  takeDamage(dmg) { this.currentHp = Math.max(0, this.currentHp - dmg); }
   rollDrops() {
     const drops = [];
-    const table = DATA.monsters[this.monsterId].dropTable;
-    for (const entry of table) {
+    for (const entry of DATA.monsters[this.monsterId].dropTable) {
       if (Math.random() < entry.rate) {
         const qty = entry.qty[0] + Math.floor(Math.random() * (entry.qty[1] - entry.qty[0] + 1));
         drops.push({ itemId: entry.itemId, qty });
@@ -1042,164 +1037,258 @@ class Monster {
     }
     return drops;
   }
-
-  // Enemy AI: simple attack
   attackTarget(target) {
-    const rawDmg = this.attack;
-    const def    = target.defense || 0;
-    const dmg    = Math.max(1, rawDmg - def + Math.floor(Math.random() * 5) - 2);
+    const dmg = Math.max(1, this.attack - (target.defense || 0) + Math.floor(Math.random() * 5) - 2);
     target.currentHp = Math.max(0, target.currentHp - dmg);
     return dmg;
   }
 }
 
-// ── SVG Renderer ─────────────────────────────────────────────
-const MonsterRenderer = {
+// ============================================================
+//  Three.js Monster Renderer
+// ============================================================
+const MonsterRenderer = (() => {
 
-  render(monsterId) {
-    if (monsterId === 'pitcher_knight') return this._renderPitcherKnight();
-    return '<div class="unknown-monster">?</div>';
-  },
+  let _scene, _camera, _renderer, _monster, _mixer, _clock;
+  let _animFrame, _canvas;
+  let _floatT = 0;
 
-  _renderPitcherKnight() {
-    // A layered SVG giving a pseudo-3D look with shading
-    return `
-    <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg"
-         class="monster-svg pitcher-knight-svg" aria-label="Pitcher-Knight">
-      <defs>
-        <!-- Body gradient — deep pitcher green -->
-        <radialGradient id="pitcherGrad" cx="40%" cy="35%">
-          <stop offset="0%"   stop-color="#2e7d4f"/>
-          <stop offset="60%"  stop-color="#1a4a2e"/>
-          <stop offset="100%" stop-color="#0d2e1a"/>
-        </radialGradient>
-        <!-- Armor gradient — mossy stone -->
-        <linearGradient id="armorGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%"  stop-color="#a0926a"/>
-          <stop offset="100%" stop-color="#5c4a2e"/>
-        </linearGradient>
-        <!-- Lid (helmet) gradient -->
-        <linearGradient id="lidGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"  stop-color="#7a6040"/>
-          <stop offset="100%" stop-color="#3a2c18"/>
-        </linearGradient>
-        <!-- Glow for eyes -->
-        <filter id="eyeGlow">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
-          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        <!-- Drop shadow -->
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/>
-        </filter>
-      </defs>
+  function init(canvasEl) {
+    if (_renderer) dispose();
+    _canvas = canvasEl;
+    _clock  = new THREE.Clock();
 
-      <!-- ── LEGS ── -->
-      <!-- Left leg -->
-      <ellipse cx="70" cy="228" rx="18" ry="10" fill="#5c4a2e" opacity="0.6"/>
-      <rect x="55" y="200" width="28" height="35" rx="8"
-            fill="url(#armorGrad)" filter="url(#shadow)"/>
-      <!-- Left leg armor plate -->
-      <rect x="57" y="205" width="24" height="12" rx="4" fill="#c8b080" opacity="0.3"/>
+    // Scene
+    _scene = new THREE.Scene();
 
-      <!-- Right leg -->
-      <ellipse cx="130" cy="228" rx="18" ry="10" fill="#5c4a2e" opacity="0.6"/>
-      <rect x="117" y="200" width="28" height="35" rx="8"
-            fill="url(#armorGrad)" filter="url(#shadow)"/>
-      <rect x="119" y="205" width="24" height="12" rx="4" fill="#c8b080" opacity="0.3"/>
+    // Camera
+    _camera = new THREE.PerspectiveCamera(45, canvasEl.width / canvasEl.height, 0.1, 100);
+    _camera.position.set(0, 1.5, 4);
+    _camera.lookAt(0, 0.8, 0);
 
-      <!-- ── TORSO (Pitcher body) ── -->
-      <!-- Main pitcher shape -->
-      <path d="M60,130 Q50,165 55,200 Q100,215 145,200 Q150,165 140,130 Q100,115 60,130 Z"
-            fill="url(#pitcherGrad)" filter="url(#shadow)"/>
-      <!-- Pitcher ribbing lines -->
-      <path d="M65,145 Q100,138 135,145" stroke="#2e7d4f" stroke-width="1.5" fill="none" opacity="0.7"/>
-      <path d="M62,160 Q100,153 138,160" stroke="#2e7d4f" stroke-width="1.5" fill="none" opacity="0.7"/>
-      <path d="M62,175 Q100,168 138,175" stroke="#2e7d4f" stroke-width="1.5" fill="none" opacity="0.7"/>
-      <path d="M64,190 Q100,183 136,190" stroke="#2e7d4f" stroke-width="1.5" fill="none" opacity="0.5"/>
-      <!-- Pitcher mouth rim -->
-      <ellipse cx="100" cy="130" rx="42" ry="14"
-               fill="#3a6e4e" stroke="#5aab78" stroke-width="2"/>
-      <!-- Acidic glow inside mouth -->
-      <ellipse cx="100" cy="133" rx="32" ry="8" fill="#1a5c35" opacity="0.8"/>
-      <ellipse cx="100" cy="134" rx="20" ry="5" fill="#0d3d22" opacity="0.9"/>
-      <!-- Highlight on pitcher body -->
-      <path d="M70,140 Q75,175 72,198" stroke="#4aab68" stroke-width="3"
-            fill="none" opacity="0.25" stroke-linecap="round"/>
+    // Renderer — transparent so camera feed shows through
+    _renderer = new THREE.WebGLRenderer({ canvas: canvasEl, alpha: true, antialias: true });
+    _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    _renderer.setSize(canvasEl.width, canvasEl.height);
+    _renderer.shadowMap.enabled = true;
+    _renderer.setClearColor(0x000000, 0);
 
-      <!-- ── SHOULDER ARMOR PAULDRONS ── -->
-      <!-- Left pauldron -->
-      <path d="M45,125 Q30,115 38,100 Q55,90 70,105 Q65,120 55,128 Z"
-            fill="url(#armorGrad)" filter="url(#shadow)"/>
-      <path d="M46,120 Q34,112 41,102 Q55,95 67,108" stroke="#c8b080"
-            stroke-width="1" fill="none" opacity="0.4"/>
-      <!-- Right pauldron -->
-      <path d="M155,125 Q170,115 162,100 Q145,90 130,105 Q135,120 145,128 Z"
-            fill="url(#armorGrad)" filter="url(#shadow)"/>
-      <path d="M154,120 Q166,112 159,102 Q145,95 133,108" stroke="#c8b080"
-            stroke-width="1" fill="none" opacity="0.4"/>
+    // Lights
+    const ambient = new THREE.AmbientLight(0x88bbaa, 0.6);
+    _scene.add(ambient);
 
-      <!-- ── ARMS ── -->
-      <!-- Left arm -->
-      <path d="M55,128 Q32,140 28,162 Q32,172 40,168 Q48,155 62,142 Z"
-            fill="url(#armorGrad)" filter="url(#shadow)"/>
-      <!-- Left fist/vine fist -->
-      <circle cx="30" cy="168" r="14" fill="#2e5c3f" stroke="#4aab68" stroke-width="2"/>
-      <path d="M22,162 Q30,155 38,162" stroke="#4aab68" stroke-width="2" fill="none"/>
-      <path d="M20,168 Q30,162 40,168" stroke="#4aab68" stroke-width="2" fill="none"/>
-      <path d="M22,174 Q30,169 38,174" stroke="#4aab68" stroke-width="2" fill="none"/>
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+    sun.position.set(3, 8, 4);
+    sun.castShadow = true;
+    _scene.add(sun);
 
-      <!-- Right arm -->
-      <path d="M145,128 Q168,140 172,162 Q168,172 160,168 Q152,155 138,142 Z"
-            fill="url(#armorGrad)" filter="url(#shadow)"/>
-      <!-- Right fist -->
-      <circle cx="170" cy="168" r="14" fill="#2e5c3f" stroke="#4aab68" stroke-width="2"/>
-      <path d="M162,162 Q170,155 178,162" stroke="#4aab68" stroke-width="2" fill="none"/>
-      <path d="M160,168 Q170,162 180,168" stroke="#4aab68" stroke-width="2" fill="none"/>
-      <path d="M162,174 Q170,169 178,174" stroke="#4aab68" stroke-width="2" fill="none"/>
+    const fill = new THREE.DirectionalLight(0x44ff88, 0.4);
+    fill.position.set(-3, 2, -2);
+    _scene.add(fill);
 
-      <!-- ── LID HELMET ── -->
-      <!-- Helmet base -->
-      <ellipse cx="100" cy="102" rx="46" ry="18"
-               fill="url(#lidGrad)" stroke="#8b6a3a" stroke-width="2" filter="url(#shadow)"/>
-      <!-- Helmet dome / lid curve -->
-      <path d="M54,102 Q56,68 100,62 Q144,68 146,102"
-            fill="url(#lidGrad)" stroke="#8b6a3a" stroke-width="2"/>
-      <!-- Lid texture veins -->
-      <path d="M100,65 Q95,80 90,98" stroke="#5c4020" stroke-width="1.2" fill="none" opacity="0.6"/>
-      <path d="M100,65 Q105,80 110,98" stroke="#5c4020" stroke-width="1.2" fill="none" opacity="0.6"/>
-      <path d="M100,65 Q82,82 75,98" stroke="#5c4020" stroke-width="1" fill="none" opacity="0.4"/>
-      <path d="M100,65 Q118,82 125,98" stroke="#5c4020" stroke-width="1" fill="none" opacity="0.4"/>
-      <!-- Helmet highlight -->
-      <path d="M72,82 Q100,72 120,80" stroke="#c8a060" stroke-width="2"
-            fill="none" opacity="0.35" stroke-linecap="round"/>
-      <!-- Lid rim fringe (teeth-like serrations) -->
-      <path d="M54,102 L58,96 L64,103 L70,95 L76,103 L82,95 L88,103 L94,95
-               L100,103 L106,95 L112,103 L118,95 L124,103 L130,95 L136,103
-               L142,95 L146,102"
-            stroke="#a07840" stroke-width="1.5" fill="none"/>
+    // Build Pitcher-Knight model
+    _monster = _buildPitcherKnight();
+    _scene.add(_monster);
 
-      <!-- ── FACE (between helmet and pitcher rim) ── -->
-      <!-- Face plate -->
-      <ellipse cx="100" cy="118" rx="30" ry="14" fill="#1e3d2a" stroke="#2e5c3f" stroke-width="1.5"/>
-      <!-- Eyes -->
-      <ellipse cx="88"  cy="116" rx="7" ry="7" fill="#ff6b35" filter="url(#eyeGlow)"/>
-      <ellipse cx="112" cy="116" rx="7" ry="7" fill="#ff6b35" filter="url(#eyeGlow)"/>
-      <!-- Pupils -->
-      <ellipse cx="89"  cy="117" rx="3" ry="4" fill="#1a0a00"/>
-      <ellipse cx="113" cy="117" rx="3" ry="4" fill="#1a0a00"/>
-      <!-- Eye highlights -->
-      <circle cx="90"  cy="115" r="1.5" fill="#ffb07a" opacity="0.8"/>
-      <circle cx="114" cy="115" r="1.5" fill="#ffb07a" opacity="0.8"/>
+    // Ground shadow disc
+    const shadowGeo  = new THREE.CircleGeometry(0.7, 32);
+    const shadowMat  = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
+    const shadowDisc = new THREE.Mesh(shadowGeo, shadowMat);
+    shadowDisc.rotation.x = -Math.PI / 2;
+    shadowDisc.position.y = -0.01;
+    _scene.add(shadowDisc);
 
-      <!-- ── DECORATIVE VINES ── -->
-      <path d="M35,125 Q20,115 18,100 Q22,92 28,96" stroke="#4aab68"
-            stroke-width="1.5" fill="none" opacity="0.5"/>
-      <path d="M165,125 Q180,115 182,100 Q178,92 172,96" stroke="#4aab68"
-            stroke-width="1.5" fill="none" opacity="0.5"/>
-    </svg>`;
-  },
-};
+    _floatT = 0;
+    _animate();
+  }
+
+  function _animate() {
+    _animFrame = requestAnimationFrame(_animate);
+    _floatT   += 0.02;
+
+    if (_monster) {
+      // Gentle float + slight sway
+      _monster.position.y  = Math.sin(_floatT) * 0.08;
+      _monster.rotation.y += 0.008;
+    }
+
+    _renderer.render(_scene, _camera);
+  }
+
+  function dispose() {
+    if (_animFrame) cancelAnimationFrame(_animFrame);
+    if (_renderer)  _renderer.dispose();
+    _scene = _camera = _renderer = _monster = _clock = null;
+  }
+
+  function playHit() {
+    if (!_monster) return;
+    const startX = _monster.position.x;
+    let t = 0;
+    const shake = setInterval(() => {
+      _monster.position.x = startX + (Math.random() - 0.5) * 0.15;
+      t++;
+      if (t > 8) { _monster.position.x = startX; clearInterval(shake); }
+    }, 40);
+    // Flash red
+    _monster.traverse(child => {
+      if (child.isMesh && child.material) {
+        const origColor = child.material.color.clone();
+        child.material.emissive = new THREE.Color(0xff2200);
+        child.material.emissiveIntensity = 0.8;
+        setTimeout(() => {
+          child.material.emissive.set(0x000000);
+          child.material.emissiveIntensity = 0;
+        }, 300);
+      }
+    });
+  }
+
+  // ── Build Pitcher-Knight 3D model ─────────────────────────
+  function _buildPitcherKnight() {
+    const group = new THREE.Group();
+
+    const green      = new THREE.MeshLambertMaterial({ color: 0x1a5c35 });
+    const greenLight = new THREE.MeshLambertMaterial({ color: 0x2e7d4f });
+    const armor      = new THREE.MeshLambertMaterial({ color: 0x7a6040 });
+    const armorDark  = new THREE.MeshLambertMaterial({ color: 0x4a3820 });
+    const eyeMat     = new THREE.MeshLambertMaterial({ color: 0xff6b35, emissive: 0xff3300, emissiveIntensity: 0.6 });
+    const darkGreen  = new THREE.MeshLambertMaterial({ color: 0x0d3d22 });
+
+    // ── Legs ──
+    [-0.22, 0.22].forEach(x => {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.12, 0.45, 8), armor);
+      leg.position.set(x, 0.22, 0);
+      group.add(leg);
+      const foot = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), armorDark);
+      foot.position.set(x, 0.02, 0.06);
+      group.add(foot);
+    });
+
+    // ── Pitcher body (torso) ──
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.65, 12), green);
+    body.position.set(0, 0.72, 0);
+    group.add(body);
+
+    // Pitcher ribs
+    for (let i = 0; i < 3; i++) {
+      const rib = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.025, 6, 20), greenLight);
+      rib.position.set(0, 0.5 + i * 0.18, 0);
+      group.add(rib);
+    }
+
+    // Pitcher mouth rim
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.04, 8, 20), greenLight);
+    rim.position.set(0, 1.04, 0);
+    group.add(rim);
+
+    // Acid pool inside mouth
+    const acid = new THREE.Mesh(new THREE.CircleGeometry(0.22, 16), darkGreen);
+    acid.rotation.x = -Math.PI / 2;
+    acid.position.set(0, 1.06, 0);
+    group.add(acid);
+
+    // ── Shoulder pauldrons ──
+    [-0.42, 0.42].forEach((x, i) => {
+      const paul = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), armor);
+      paul.scale.set(1, 0.7, 0.9);
+      paul.position.set(x, 0.95, 0);
+      group.add(paul);
+      // Spike on pauldron
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.18, 6), armorDark);
+      spike.position.set(x + (i === 0 ? -0.1 : 0.1), 1.08, 0);
+      group.add(spike);
+    });
+
+    // ── Arms ──
+    [-0.52, 0.52].forEach(x => {
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.5, 8), armor);
+      arm.rotation.z = x < 0 ? 0.5 : -0.5;
+      arm.position.set(x * 1.1, 0.7, 0);
+      group.add(arm);
+
+      // Fist — vine ball
+      const fist = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), green);
+      fist.position.set(x < 0 ? -0.72 : 0.72, 0.52, 0);
+      group.add(fist);
+      // Knuckle lines
+      for (let k = 0; k < 3; k++) {
+        const knuckle = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.02, 4, 10), greenLight);
+        knuckle.rotation.y = Math.PI / 2;
+        knuckle.position.set(x < 0 ? -0.72 : 0.72, 0.44 + k * 0.07, 0);
+        group.add(knuckle);
+      }
+    });
+
+    // ── Lid Helmet ──
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), armor);
+    helmet.position.set(0, 1.18, 0);
+    group.add(helmet);
+
+    // Helmet brim
+    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.32, 0.06, 14), armorDark);
+    brim.position.set(0, 1.1, 0);
+    group.add(brim);
+
+    // Lid serrations
+    for (let i = 0; i < 10; i++) {
+      const angle = (i / 10) * Math.PI * 2;
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.1, 4), armorDark);
+      tooth.position.set(Math.cos(angle) * 0.34, 1.08, Math.sin(angle) * 0.34);
+      tooth.rotation.z = Math.PI;
+      group.add(tooth);
+    }
+
+    // Helmet vein lines (thin boxes)
+    for (let i = 0; i < 4; i++) {
+      const angle  = (i / 4) * Math.PI * 2;
+      const vein   = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.28, 0.02), armorDark);
+      vein.position.set(Math.cos(angle) * 0.18, 1.3, Math.sin(angle) * 0.18);
+      vein.rotation.z = Math.cos(angle) * 0.4;
+      group.add(vein);
+    }
+
+    // ── Face / Eyes ──
+    [-0.12, 0.12].forEach(x => {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), eyeMat);
+      eye.position.set(x, 1.08, 0.26);
+      group.add(eye);
+      // Pupil
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 6), new THREE.MeshBasicMaterial({ color: 0x110500 }));
+      pupil.position.set(x, 1.08, 0.32);
+      group.add(pupil);
+    });
+
+    // ── Decorative vines ──
+    const vineMat = new THREE.MeshLambertMaterial({ color: 0x4aab68 });
+    const vineCurve = (ox, oy, oz) => {
+      const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.01, 0.3, 5), vineMat);
+      vine.position.set(ox, oy, oz);
+      vine.rotation.z = ox < 0 ? 0.8 : -0.8;
+      group.add(vine);
+    };
+    vineCurve(-0.42, 1.1, 0.1);
+    vineCurve( 0.42, 1.1, 0.1);
+    vineCurve(-0.35, 0.5, 0.2);
+    vineCurve( 0.35, 0.5, 0.2);
+
+    // Scale the whole model to fit nicely
+    group.scale.set(0.72, 0.72, 0.72);
+    group.position.y = 0.1;
+
+    return group;
+  }
+
+  // ── Resize handler ────────────────────────────────────────
+  function resize(w, h) {
+    if (!_renderer || !_camera) return;
+    _camera.aspect = w / h;
+    _camera.updateProjectionMatrix();
+    _renderer.setSize(w, h);
+  }
+
+  return { init, dispose, playHit, resize };
+})();
 // ============================================================
 //  guardian.js — Player Guardian (hatched from seed)
 // ============================================================
@@ -1304,6 +1393,8 @@ const Hatchery = {
     const check = this.canHatch(seedIndex);
     if (!check.ok) return check;
     State.removeItem('water', check.cost);
+    // Remove seed from inventory too
+    State.removeItem(check.seed.seedItemId, 1);
     State.removeSeed(seedIndex);
     const g = new Guardian(check.seed.monsterId);
     State.addGuardian(g);
@@ -1457,8 +1548,12 @@ const Battle = (() => {
   }
 
   function _renderEnemy() {
-    const wrap = document.getElementById('enemy-model');
-    if (wrap) wrap.innerHTML = MonsterRenderer.render(_enemy.monsterId);
+    const canvas = document.getElementById('monster-canvas');
+    if (canvas) {
+      canvas.width  = canvas.offsetWidth  || 300;
+      canvas.height = canvas.offsetHeight || 350;
+      MonsterRenderer.init(canvas);
+    }
     const tag = document.getElementById('enemy-name-tag');
     if (tag) tag.textContent = `${_enemy.name} · Lv ${_enemy.level}`;
   }
@@ -1478,12 +1573,14 @@ const Battle = (() => {
   }
 
   function _playHitEffect(target) {
-    const el = target === 'enemy'
-      ? document.getElementById('enemy-model-wrap')
-      : document.getElementById('guardian-sprite-wrap');
-    if (!el) return;
-    el.classList.add('hit-flash');
-    setTimeout(() => el.classList.remove('hit-flash'), 350);
+    if (target === 'enemy') {
+      MonsterRenderer.playHit();
+    } else {
+      const el = document.getElementById('guardian-sprite-wrap');
+      if (!el) return;
+      el.classList.add('hit-flash');
+      setTimeout(() => el.classList.remove('hit-flash'), 350);
+    }
   }
 
   function _playCaptureEffect() {
@@ -1887,8 +1984,10 @@ const Game = (() => {
 
   let _cameraStream = null;
 
+  // Level increases every 5 encounters, soft-capped at 10
   function _enemyLevel() {
-    return 1 + Math.floor(State.get().encounterCount / 3);
+    const count = State.get().encounterCount;
+    return Math.min(10, 1 + Math.floor(count / 5));
   }
 
   function startGame() {
@@ -1936,7 +2035,8 @@ const Game = (() => {
   function _newEncounter() {
     const pool = ['pitcher_knight'];
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    Battle.start(pick, _enemyLevel());
+    const level = _enemyLevel();
+    Battle.start(pick, level);
   }
 
   async function _startCamera() {
@@ -1971,6 +2071,12 @@ const Game = (() => {
       document.querySelector(`#detail-tabs [data-tab="${tab}"]`)?.classList.add('active');
       document.getElementById(`detail-tab-${tab}`)?.classList.add('active');
     };
+
+    // Resize Three.js canvas when window resizes
+    window.addEventListener('resize', () => {
+      const c = document.getElementById('monster-canvas');
+      if (c) MonsterRenderer.resize(c.offsetWidth, c.offsetHeight);
+    });
   </script>
 </body>
 </html>
