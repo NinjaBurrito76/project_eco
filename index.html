@@ -7,11 +7,11 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Eco Guardian</title>
-
-  <!-- A-Frame + AR.js -->
+  <!-- Three.js for floating mode -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- A-Frame + AR.js for marker mode (loads async, won't break if offline) -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-
   <style>
 /* ============================================================
    style.css — Eco Guardian  (mobile-first)
@@ -183,9 +183,9 @@ html, body {
   background: #0a1e10;
 }
 
-/* Battle screen — A-Frame scene handles camera */
+/* Battle screen — transparent so camera video shows through */
 #screen-battle {
-  background: #000 !important;
+  background: transparent !important;
 }
 
 /* AR grid overlay */
@@ -666,33 +666,29 @@ html, body {
 #guardian-bottom-row { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
 #guardian-level-tag { font-size: 0.58rem; color: var(--c-amber); }
 #guardian-name { font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
+
+/* A-Frame scene hidden behind everything */
+#ar-scene {
+  position: fixed; inset: 0; z-index: 0;
+  display: none; pointer-events: none;
+}
+/* Hide A-Frame default UI */
+.a-enter-vr, .a-orientation-modal { display: none !important; }
   </style>
 </head>
 <body>
 
-  <!-- ══════════ A-FRAME AR SCENE (hidden until battle) ══════════ -->
-  <!-- Markerless mode by default; marker mode activates when Hiro detected -->
+  <!-- A-Frame marker scene — hidden until battle -->
   <a-scene id="ar-scene"
     embedded
-    arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    arjs="sourceType: webcam; debugUIEnabled: false;"
     vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; precision: medium;"
-    style="display:none">
-
-    <!-- Camera rig — monster attaches here in markerless mode -->
-    <a-entity id="ar-camera-rig">
-      <a-entity camera></a-entity>
-    </a-entity>
-
-    <!-- Hiro marker — monster snaps here when detected -->
-    <a-marker id="ar-marker" preset="hiro"
-      emitevents="true"
-      cursor="rayOrigin: mouse">
-    </a-marker>
-
+    renderer="logarithmicDepthBuffer: true;">
+    <a-marker id="ar-marker" preset="hiro" emitevents="true"></a-marker>
+    <a-entity camera></a-entity>
   </a-scene>
 
-  <!-- ══════════ TITLE ══════════ -->
+  <!-- TITLE -->
   <div id="screen-title" class="screen active">
     <div class="title-bg"></div>
     <div class="title-content">
@@ -703,7 +699,7 @@ html, body {
     </div>
   </div>
 
-  <!-- ══════════ TUTORIAL ══════════ -->
+  <!-- TUTORIAL -->
   <div id="screen-tutorial" class="screen">
     <div class="tutorial-header">
       <div class="tutorial-icon">🌿</div>
@@ -745,8 +741,8 @@ html, body {
       <div class="tutorial-step">
         <div class="tutorial-step-num">4</div>
         <div class="tutorial-step-body">
-          <div class="tutorial-step-title">Enter Battle</div>
-          <div class="tutorial-step-desc">Fight monsters in AR! Point at a Hiro marker to place them on a surface.</div>
+          <div class="tutorial-step-title">Battle in AR!</div>
+          <div class="tutorial-step-desc">Enemy floats in AR by default. Point at a Hiro marker to place both fighters on a surface!</div>
         </div>
         <div class="tutorial-step-icon">🌍</div>
       </div>
@@ -754,7 +750,7 @@ html, body {
     <button class="btn-begin" onclick="Game.finishTutorial()">Let's Go! →</button>
   </div>
 
-  <!-- ══════════ HUB ══════════ -->
+  <!-- HUB -->
   <div id="screen-hub" class="screen">
     <div class="hub-header">
       <div class="hub-title">ECO GUARDIAN</div>
@@ -780,19 +776,21 @@ html, body {
     </div>
   </div>
 
-  <!-- ══════════ BATTLE (UI only — A-Frame handles camera/3D) ══════════ -->
+  <!-- BATTLE -->
   <div id="screen-battle" class="screen">
-    <!-- empty — A-Frame scene is behind everything -->
+    <video id="ar-camera" autoplay playsinline muted></video>
+    <div id="ar-bg-overlay"></div>
+    <div id="enemy-stage">
+      <div id="enemy-model-wrap">
+        <canvas id="monster-canvas"></canvas>
+      </div>
+      <div id="enemy-shadow"></div>
+      <div id="enemy-name-tag"></div>
+    </div>
+    <div id="effects-layer"></div>
   </div>
 
-  <!-- Monster name tag -->
-  <div id="enemy-stage">
-    <div id="enemy-model-wrap"><div id="enemy-model"></div></div>
-    <div id="enemy-shadow"></div>
-    <div id="enemy-name-tag"></div>
-  </div>
-
-  <!-- Battle HUD -->
+  <!-- Battle HUD (outside battle screen for iOS) -->
   <div id="hud-top">
     <button class="btn-exit-battle" onclick="UI.exitBattle()">✕</button>
     <div class="hud-enemy-block">
@@ -831,7 +829,7 @@ html, body {
     </div>
   </div>
 
-  <!-- ══════════ RESULT ══════════ -->
+  <!-- RESULT -->
   <div id="screen-result" class="screen">
     <div id="result-content">
       <h2 id="result-title">Victory!</h2>
@@ -843,7 +841,7 @@ html, body {
     </div>
   </div>
 
-  <!-- ══════════ GARDEN ══════════ -->
+  <!-- GARDEN -->
   <div id="screen-garden" class="screen panel-screen">
     <div class="panel-header">
       <button class="btn-back" onclick="UI.closeToHub()">← Back</button>
@@ -857,7 +855,7 @@ html, body {
     <div id="garden-tab-hatchery" class="tab-content">       <div id="garden-hatch-list"></div></div>
   </div>
 
-  <!-- ══════════ GUARDIAN DETAIL ══════════ -->
+  <!-- GUARDIAN DETAIL -->
   <div id="screen-guardian-detail" class="screen panel-screen">
     <div class="panel-header">
       <button class="btn-back" onclick="UI.closeDetail()">← Back</button>
@@ -873,7 +871,7 @@ html, body {
     <div id="detail-tab-feed" class="tab-content"></div>
   </div>
 
-  <!-- ══════════ INVENTORY ══════════ -->
+  <!-- INVENTORY -->
   <div id="screen-inventory" class="screen panel-screen">
     <div class="panel-header">
       <button class="btn-back" onclick="UI.closeToHub()">← Back</button>
@@ -1042,7 +1040,9 @@ const State = (() => {
   };
 })();
 // ============================================================
-//  monsters.js — Monster class + A-Frame/AR.js renderer
+//  monsters.js — Monster class + Three.js renderer
+//  - No marker: enemy floats over camera
+//  - Marker found: enemy + guardian stand on marker surface
 // ============================================================
 
 class Monster {
@@ -1070,252 +1070,340 @@ class Monster {
     return drops;
   }
   attackTarget(target) {
-    const dmg = Math.max(1, this.attack - (target.defense || 0) + Math.floor(Math.random() * 5) - 2);
+    const dmg = Math.max(1, this.attack - (target.defense||0) + Math.floor(Math.random()*5) - 2);
     target.currentHp = Math.max(0, target.currentHp - dmg);
     return dmg;
   }
 }
 
 // ============================================================
-//  AR Monster Renderer — A-Frame + AR.js
-//  - Floats in center when no marker
-//  - Snaps to marker when detected
+//  Three.js Battle Renderer
 // ============================================================
 const MonsterRenderer = (() => {
 
-  let _markerFound  = false;
-  let _floatAnim    = null;
-  let _currentMonster = null;
+  let _scene, _camera, _renderer;
+  let _enemyGroup, _guardianGroup, _shadowE, _shadowG;
+  let _animFrame, _floatT = 0;
+  let _markerMode  = false;
+  let _monsterId   = null;
+  let _guardianMonsterId = null;
 
-  // Called by battle.js to spawn the monster
+  // ── Public: spawn enemy (called each encounter) ───────────
   function spawn(monsterId) {
-    _currentMonster = monsterId;
-    const scene = document.getElementById('ar-scene');
-    if (!scene) return;
+    _monsterId = monsterId;
+    _guardianMonsterId = State.getActiveGuardian()?.monsterId || null;
 
-    // Clear previous monster
-    const old = document.getElementById('ar-monster-root');
-    if (old) old.remove();
+    const canvas = document.getElementById('monster-canvas');
+    if (!canvas) return;
+    if (_renderer) dispose();
 
-    // Build monster entity tree
-    const root = document.createElement('a-entity');
-    root.id = 'ar-monster-root';
+    canvas.width  = canvas.offsetWidth  || 300;
+    canvas.height = canvas.offsetHeight || 380;
 
-    if (monsterId === 'pitcher_knight') {
-      root.innerHTML = _pitcherKnightAframe();
-    }
+    _scene  = new THREE.Scene();
+    _floatT = 0;
+    _markerMode = false;
 
-    // Start in float mode — attached to camera so always visible
-    _setFloatMode(root);
-    scene.appendChild(root);
-    _startFloatAnimation(root);
+    // Camera
+    _camera = new THREE.PerspectiveCamera(45, canvas.width / canvas.height, 0.1, 100);
+    _camera.position.set(0, 1.4, 4.2);
+    _camera.lookAt(0, 0.9, 0);
+
+    // Renderer
+    _renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    _renderer.setSize(canvas.width, canvas.height);
+    _renderer.setClearColor(0x000000, 0);
+
+    // Lights
+    _scene.add(new THREE.AmbientLight(0x88ccaa, 0.7));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.3);
+    sun.position.set(3, 8, 5);
+    _scene.add(sun);
+    _scene.add(Object.assign(new THREE.DirectionalLight(0x44ff88, 0.35), {position: new THREE.Vector3(-4,2,-2)}));
+    _scene.add(Object.assign(new THREE.DirectionalLight(0xffffff, 0.2),  {position: new THREE.Vector3(0,-2,-4)}));
+
+    // Enemy model — center float
+    _enemyGroup = _buildModel(monsterId);
+    _enemyGroup.position.set(0, 0.08, 0);
+    _scene.add(_enemyGroup);
+
+    // Enemy shadow
+    _shadowE = _makeShadow();
+    _shadowE.position.set(0, -0.02, 0);
+    _scene.add(_shadowE);
+
+    // Guardian not shown until marker found
+    _guardianGroup = null;
+    _shadowG = null;
+
+    _animate();
   }
 
-  // Float mode: entity follows camera view (no marker needed)
-  function _setFloatMode(root) {
-    root.setAttribute('position', '0 -0.5 -2');
-    root.setAttribute('rotation', '0 0 0');
-    root.removeAttribute('visible'); // will be set below
-    root.setAttribute('visible', 'true');
-
-    // Attach to camera rig so it always stays in view
-    const camRig = document.getElementById('ar-camera-rig');
-    if (camRig && root.parentNode !== camRig) {
-      camRig.appendChild(root);
-    }
-  }
-
-  // Marker mode: entity is child of marker, stands on it
-  function _setMarkerMode(root) {
-    const marker = document.getElementById('ar-marker');
-    if (!marker) return;
-    root.setAttribute('position', '0 0.5 0');
-    root.setAttribute('rotation', '0 0 0');
-    if (root.parentNode !== marker) {
-      marker.appendChild(root);
-    }
-  }
-
-  function _startFloatAnimation(root) {
-    if (_floatAnim) cancelAnimationFrame(_floatAnim);
-    let t = 0;
-    const tick = () => {
-      _floatAnim = requestAnimationFrame(tick);
-      t += 0.02;
-      if (!_markerFound && root) {
-        const y = -0.5 + Math.sin(t) * 0.07;
-        root.setAttribute('position', `0 ${y.toFixed(3)} -2`);
-        // Slow rotation
-        const ry = (t * 18) % 360;
-        root.setAttribute('rotation', `0 ${ry.toFixed(1)} 0`);
-      }
-    };
-    tick();
-  }
-
-  // Called when AR.js detects the marker
+  // ── Public: marker found ──────────────────────────────────
   function onMarkerFound() {
-    if (_markerFound) return;
-    _markerFound = true;
-    if (_floatAnim) { cancelAnimationFrame(_floatAnim); _floatAnim = null; }
+    if (_markerMode) return;
+    _markerMode = true;
 
-    const root = document.getElementById('ar-monster-root');
-    if (!root) return;
-    _setMarkerMode(root);
+    // Reposition camera for top-down marker view
+    _camera.position.set(0, 5, 0.1);
+    _camera.lookAt(0, 0, 0);
 
-    // Landing animation — drop from above
-    root.setAttribute('position', '0 2 0');
-    root.setAttribute('animation', 'property: position; to: 0 0.5 0; dur: 600; easing: easeOutBounce');
+    // Enemy moves to far side of marker
+    _enemyGroup.position.set(0.9, 0.08, 0);
+    _enemyGroup.rotation.y = -Math.PI / 2; // face center
 
-    // Show "landed" indicator
-    UI.toast('🎯 Monster detected on marker!');
+    // Spawn guardian on near side
+    const mid = _guardianMonsterId || _monsterId;
+    _guardianGroup = _buildModel(mid, true); // true = is guardian (tint)
+    _guardianGroup.position.set(-0.9, 0.08, 0);
+    _guardianGroup.rotation.y = Math.PI / 2; // face center
+    _scene.add(_guardianGroup);
+
+    // Guardian shadow
+    _shadowG = _makeShadow();
+    _shadowG.position.set(-0.9, -0.02, 0);
+    _scene.add(_shadowG);
+
+    // Move enemy shadow
+    _shadowE.position.set(0.9, -0.02, 0);
+
+    // Landing drop animation for both
+    _enemyGroup.position.y = 2;
+    _guardianGroup.position.y = 2;
+    _animateDrop(_enemyGroup,    0.08, 0);
+    _animateDrop(_guardianGroup, 0.08, 200);
+
+    UI.toast('🎯 Marker found! Both fighters on the field!');
   }
 
-  // Called when AR.js loses the marker
+  // ── Public: marker lost ───────────────────────────────────
   function onMarkerLost() {
-    if (!_markerFound) return;
-    _markerFound = false;
+    if (!_markerMode) return;
+    _markerMode = false;
 
-    const root = document.getElementById('ar-monster-root');
-    if (!root) return;
-    _setFloatMode(root);
-    _startFloatAnimation(root);
+    // Camera back to front view
+    _camera.position.set(0, 1.4, 4.2);
+    _camera.lookAt(0, 0.9, 0);
+
+    // Enemy back to float center
+    _enemyGroup.position.set(0, 0.08, 0);
+    _enemyGroup.rotation.y = 0;
+    _shadowE.position.set(0, -0.02, 0);
+
+    // Remove guardian
+    if (_guardianGroup) { _scene.remove(_guardianGroup); _guardianGroup = null; }
+    if (_shadowG)       { _scene.remove(_shadowG);       _shadowG = null; }
   }
 
-  // Hit animation
-  function playHit() {
-    const root = document.getElementById('ar-monster-root');
-    if (!root) return;
+  // ── Drop animation helper ─────────────────────────────────
+  function _animateDrop(group, targetY, delay) {
+    setTimeout(() => {
+      const startY = 2;
+      const duration = 600;
+      const start = performance.now();
+      const tick = (now) => {
+        const t = Math.min((now - start) / duration, 1);
+        // Bounce easing
+        const bounce = t < 0.7
+          ? t / 0.7
+          : 1 + Math.sin((t - 0.7) / 0.3 * Math.PI) * 0.15 * (1 - (t - 0.7) / 0.3);
+        group.position.y = startY + (targetY - startY) * bounce;
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, delay);
+  }
 
-    // Shake
-    const pos = root.getAttribute('position');
-    const ox  = pos ? pos.x : 0;
-    root.setAttribute('animation__shake',
-      `property: position; from: ${ox - 0.1} ${pos?.y || 0} ${pos?.z || -2}; to: ${ox + 0.1} ${pos?.y || 0} ${pos?.z || -2}; dur: 80; loop: 4; dir: alternate`);
+  // ── Animate loop ──────────────────────────────────────────
+  function _animate() {
+    _animFrame = requestAnimationFrame(_animate);
+    _floatT   += 0.018;
 
-    // Red flash via material change
-    root.querySelectorAll('[material]').forEach(el => {
-      const mat = el.getAttribute('material');
-      el.setAttribute('material', { ...mat, emissive: '#ff2200', emissiveIntensity: 0.8 });
+    if (!_markerMode) {
+      // Float enemy
+      if (_enemyGroup) {
+        _enemyGroup.position.y = 0.08 + Math.sin(_floatT) * 0.09;
+        _enemyGroup.rotation.y += 0.007;
+      }
+    } else {
+      // Gentle idle sway for both
+      if (_enemyGroup)    _enemyGroup.rotation.y    = -Math.PI/2 + Math.sin(_floatT * 0.8) * 0.08;
+      if (_guardianGroup) _guardianGroup.rotation.y =  Math.PI/2 + Math.sin(_floatT * 0.8 + 1) * 0.08;
+    }
+
+    _renderer.render(_scene, _camera);
+  }
+
+  // ── Hit effects ───────────────────────────────────────────
+  function playHit(target = 'enemy') {
+    const group = target === 'enemy' ? _enemyGroup : _guardianGroup;
+    if (!group) return;
+
+    const ox = group.position.x;
+    let t = 0;
+    const shake = setInterval(() => {
+      group.position.x = ox + (Math.random() - 0.5) * 0.18;
+      if (++t > 8) { group.position.x = ox; clearInterval(shake); }
+    }, 40);
+
+    group.traverse(child => {
+      if (!child.isMesh || !child.material) return;
+      child.material.emissive = new THREE.Color(0xff2200);
+      child.material.emissiveIntensity = 0.9;
       setTimeout(() => {
-        el.setAttribute('material', { ...mat, emissive: '#000000', emissiveIntensity: 0 });
-      }, 300);
+        if (child.material) {
+          child.material.emissive.set(0x000000);
+          child.material.emissiveIntensity = 0;
+        }
+      }, 280);
     });
   }
 
+  // ── Dispose ───────────────────────────────────────────────
   function dispose() {
-    if (_floatAnim) cancelAnimationFrame(_floatAnim);
-    _markerFound = false;
-    const root = document.getElementById('ar-monster-root');
-    if (root) root.remove();
+    if (_animFrame) cancelAnimationFrame(_animFrame);
+    if (_renderer)  _renderer.dispose();
+    _scene = _camera = _renderer = null;
+    _enemyGroup = _guardianGroup = _shadowE = _shadowG = null;
+    _markerMode = false;
+    _floatT = 0;
   }
 
-  // ── Pitcher-Knight A-Frame model ──────────────────────────
-  function _pitcherKnightAframe() {
-    return `
-    <!-- Shadow disc on ground -->
-    <a-circle radius="0.35" rotation="-90 0 0" position="0 0.01 0"
-      material="color:#000000;opacity:0.35;transparent:true"></a-circle>
-
-    <!-- Legs -->
-    <a-cylinder position="-0.15 0.18 0" radius="0.07" height="0.35"
-      material="color:#7a6040;roughness:0.8"></a-cylinder>
-    <a-cylinder position="0.15 0.18 0" radius="0.07" height="0.35"
-      material="color:#7a6040;roughness:0.8"></a-cylinder>
-    <a-sphere position="-0.15 0.02 0.04" radius="0.09"
-      material="color:#4a3820"></a-sphere>
-    <a-sphere position="0.15 0.02 0.04" radius="0.09"
-      material="color:#4a3820"></a-sphere>
-
-    <!-- Pitcher body (torso) -->
-    <a-cylinder position="0 0.62 0" radius-top="0.22" radius-bottom="0.26" height="0.55"
-      material="color:#1a5c35;roughness:0.7" segments-radial="12"></a-cylinder>
-
-    <!-- Ribs on pitcher -->
-    <a-torus position="0 0.45 0" radius="0.23" radius-tubular="0.02"
-      material="color:#2e7d4f" segments-radial="20" segments-tubular="8"></a-torus>
-    <a-torus position="0 0.62 0" radius="0.23" radius-tubular="0.02"
-      material="color:#2e7d4f" segments-radial="20" segments-tubular="8"></a-torus>
-    <a-torus position="0 0.79 0" radius="0.23" radius-tubular="0.02"
-      material="color:#2e7d4f" segments-radial="20" segments-tubular="8"></a-torus>
-
-    <!-- Pitcher mouth rim -->
-    <a-torus position="0 0.9 0" radius="0.22" radius-tubular="0.035"
-      material="color:#3a6e4e" segments-radial="20" segments-tubular="8"></a-torus>
-    <!-- Acid pool inside -->
-    <a-circle position="0 0.91 0" radius="0.18" rotation="-90 0 0"
-      material="color:#0d3d22;opacity:0.95"></a-circle>
-
-    <!-- Shoulder pauldrons -->
-    <a-sphere position="-0.38 0.82 0" radius="0.15"
-      scale="1 0.7 0.85" material="color:#7a6040"></a-sphere>
-    <a-sphere position="0.38 0.82 0" radius="0.15"
-      scale="1 0.7 0.85" material="color:#7a6040"></a-sphere>
-    <!-- Pauldron spikes -->
-    <a-cone position="-0.48 0.92 0" radius-bottom="0.04" height="0.15"
-      rotation="0 0 30" material="color:#4a3820"></a-cone>
-    <a-cone position="0.48 0.92 0" radius-bottom="0.04" height="0.15"
-      rotation="0 0 -30" material="color:#4a3820"></a-cone>
-
-    <!-- Arms -->
-    <a-cylinder position="-0.46 0.62 0" radius="0.07" height="0.42"
-      rotation="0 0 30" material="color:#7a6040"></a-cylinder>
-    <a-cylinder position="0.46 0.62 0" radius="0.07" height="0.42"
-      rotation="0 0 -30" material="color:#7a6040"></a-cylinder>
-
-    <!-- Fists -->
-    <a-sphere position="-0.64 0.44 0" radius="0.12"
-      material="color:#1a5c35"></a-sphere>
-    <a-sphere position="0.64 0.44 0" radius="0.12"
-      material="color:#1a5c35"></a-sphere>
-    <!-- Knuckle rings -->
-    <a-torus position="-0.64 0.38 0" radius="0.09" radius-tubular="0.018"
-      rotation="0 90 0" material="color:#2e7d4f" segments-radial="10"></a-torus>
-    <a-torus position="0.64 0.38 0" radius="0.09" radius-tubular="0.018"
-      rotation="0 90 0" material="color:#2e7d4f" segments-radial="10"></a-torus>
-
-    <!-- Helmet dome -->
-    <a-sphere position="0 1.08 0" radius="0.28"
-      phi-start="0" phi-length="180" theta-start="0" theta-length="120"
-      material="color:#7a6040;roughness:0.6" segments-height="8" segments-width="12"></a-sphere>
-    <!-- Helmet brim -->
-    <a-cylinder position="0 0.96 0" radius="0.31" height="0.055"
-      material="color:#4a3820" segments-radial="14"></a-cylinder>
-
-    <!-- Lid serrations (8 teeth) -->
-    <a-cone position="0.31 0.95 0"     radius-bottom="0.03" height="0.09" rotation="0 0 -15"  material="color:#4a3820"></a-cone>
-    <a-cone position="-0.31 0.95 0"    radius-bottom="0.03" height="0.09" rotation="0 0 15"   material="color:#4a3820"></a-cone>
-    <a-cone position="0 0.95 0.31"     radius-bottom="0.03" height="0.09" rotation="15 0 0"   material="color:#4a3820"></a-cone>
-    <a-cone position="0 0.95 -0.31"    radius-bottom="0.03" height="0.09" rotation="-15 0 0"  material="color:#4a3820"></a-cone>
-    <a-cone position="0.22 0.95 0.22"  radius-bottom="0.03" height="0.09" rotation="10 0 -10" material="color:#4a3820"></a-cone>
-    <a-cone position="-0.22 0.95 0.22" radius-bottom="0.03" height="0.09" rotation="10 0 10"  material="color:#4a3820"></a-cone>
-    <a-cone position="0.22 0.95 -0.22" radius-bottom="0.03" height="0.09" rotation="-10 0 -10" material="color:#4a3820"></a-cone>
-    <a-cone position="-0.22 0.95 -0.22" radius-bottom="0.03" height="0.09" rotation="-10 0 10" material="color:#4a3820"></a-cone>
-
-    <!-- Eyes -->
-    <a-sphere position="-0.1 0.96 0.23" radius="0.065"
-      material="color:#ff6b35;emissive:#ff3300;emissiveIntensity:0.7"></a-sphere>
-    <a-sphere position="0.1 0.96 0.23" radius="0.065"
-      material="color:#ff6b35;emissive:#ff3300;emissiveIntensity:0.7"></a-sphere>
-    <!-- Pupils -->
-    <a-sphere position="-0.1 0.96 0.285" radius="0.032"
-      material="color:#110500"></a-sphere>
-    <a-sphere position="0.1 0.96 0.285" radius="0.032"
-      material="color:#110500"></a-sphere>
-
-    <!-- Decorative vines -->
-    <a-cylinder position="-0.36 0.92 0.08" radius="0.018" height="0.22"
-      rotation="0 0 40" material="color:#4aab68"></a-cylinder>
-    <a-cylinder position="0.36 0.92 0.08" radius="0.018" height="0.22"
-      rotation="0 0 -40" material="color:#4aab68"></a-cylinder>
-    <a-cylinder position="-0.3 0.42 0.18" radius="0.014" height="0.2"
-      rotation="20 0 35" material="color:#4aab68"></a-cylinder>
-    <a-cylinder position="0.3 0.42 0.18" radius="0.014" height="0.2"
-      rotation="20 0 -35" material="color:#4aab68"></a-cylinder>
-    `;
+  function resize(w, h) {
+    if (!_renderer || !_camera) return;
+    _camera.aspect = w / h;
+    _camera.updateProjectionMatrix();
+    _renderer.setSize(w, h);
   }
 
-  return { spawn, onMarkerFound, onMarkerLost, playHit, dispose };
+  // ── Shadow disc ───────────────────────────────────────────
+  function _makeShadow() {
+    return new THREE.Mesh(
+      new THREE.CircleGeometry(0.65, 32),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })
+    );
+  }
+
+  // ── Material helper ───────────────────────────────────────
+  function _mat(hex) { return new THREE.MeshLambertMaterial({ color: hex }); }
+
+  // ── Model builder — returns right model per monsterId ─────
+  function _buildModel(monsterId, isGuardian = false) {
+    // For now both use Pitcher-Knight model
+    // Guardian version gets a slight blue-green tint to differentiate
+    return isGuardian ? _buildPitcherKnightGuardian() : _buildPitcherKnight();
+  }
+
+  // ── Enemy Pitcher-Knight (green/brown) ────────────────────
+  function _buildPitcherKnight() {
+    return _buildPKModel(
+      0x1a5c35, 0x2e7d4f, 0x4aab68,  // greens
+      0x8b7040, 0x4a3820,             // armor
+      0xff6b35,                       // eye
+      0x0d3d22                        // dark
+    );
+  }
+
+  // ── Guardian Pitcher-Knight (blue-green tint) ─────────────
+  function _buildPitcherKnightGuardian() {
+    return _buildPKModel(
+      0x1a4a6e, 0x2e6d8f, 0x4aaabb,  // blue-greens
+      0x607080, 0x303848,             // cooler armor
+      0x88ddff,                       // blue eye
+      0x0d2233                        // dark blue
+    );
+  }
+
+  function _buildPKModel(col1, col2, col3, arm1, arm2, eyeCol, darkCol) {
+    const g = new THREE.Group();
+    const green      = _mat(col1);
+    const greenLight = _mat(col2);
+    const greenBright= _mat(col3);
+    const armor      = _mat(arm1);
+    const armorDark  = _mat(arm2);
+    const eyeM       = new THREE.MeshLambertMaterial({
+      color: eyeCol, emissive: new THREE.Color(eyeCol), emissiveIntensity: 0.6
+    });
+    const pupilM  = new THREE.MeshBasicMaterial({ color: 0x110500 });
+    const darkG   = _mat(darkCol);
+    const acidM   = new THREE.MeshBasicMaterial({ color: col3, transparent: true, opacity: 0.7 });
+
+    const add = (geo, mat, px=0,py=0,pz=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.scale.set(sx,sy,sz);
+      g.add(m); return m;
+    };
+
+    // Feet
+    add(new THREE.SphereGeometry(0.13,10,8), armorDark, -0.22,0.04, 0.07);
+    add(new THREE.SphereGeometry(0.13,10,8), armorDark,  0.22,0.04, 0.07);
+    // Legs
+    add(new THREE.CylinderGeometry(0.10,0.13,0.42,10), armor, -0.22,0.26,0);
+    add(new THREE.CylinderGeometry(0.10,0.13,0.42,10), armor,  0.22,0.26,0);
+    // Body
+    add(new THREE.CylinderGeometry(0.25,0.30,0.62,14), green, 0,0.72,0);
+    // Ribs
+    [0.47,0.63,0.79].forEach(y => add(new THREE.TorusGeometry(0.27,0.026,8,22), greenLight, 0,y,0));
+    // Mouth rim + acid
+    add(new THREE.TorusGeometry(0.26,0.042,10,22), greenLight, 0,1.03,0);
+    add(new THREE.CircleGeometry(0.20,18), acidM, 0,1.05,0, -Math.PI/2,0,0);
+    // Pauldrons
+    [-0.44,0.44].forEach((x,i) => {
+      add(new THREE.SphereGeometry(0.17,10,8), armor, x,0.94,0, 0,0,0, 1,0.72,0.9);
+      const d = i===0?-1:1;
+      add(new THREE.ConeGeometry(0.045,0.22,7), armorDark, x+d*0.13,1.08,0, 0,0,-d*0.45);
+    });
+    // Arms + fists
+    [-1,1].forEach(side => {
+      add(new THREE.CylinderGeometry(0.08,0.10,0.48,9), armor, side*0.52,0.68,0, 0,0,side*0.52);
+      const fx = side*0.74;
+      add(new THREE.SphereGeometry(0.13,10,8), green, fx,0.50,0);
+      [0.44,0.52,0.60].forEach(y =>
+        add(new THREE.TorusGeometry(0.10,0.022,6,12), greenLight, fx,y,0, 0,Math.PI/2,0)
+      );
+    });
+    // Helmet
+    add(new THREE.SphereGeometry(0.30,14,10,0,Math.PI*2,0,Math.PI*0.58), armor, 0,1.16,0);
+    add(new THREE.CylinderGeometry(0.34,0.30,0.06,16), armorDark, 0,1.08,0);
+    // Teeth
+    for (let i=0;i<10;i++) {
+      const a=(i/10)*Math.PI*2;
+      add(new THREE.ConeGeometry(0.034,0.12,5), armorDark,
+          Math.cos(a)*0.33,1.07,Math.sin(a)*0.33, 0,0,Math.PI);
+    }
+    // Helmet veins
+    for (let i=0;i<5;i++) {
+      const a=(i/5)*Math.PI*2;
+      add(new THREE.BoxGeometry(0.018,0.26,0.018), armorDark,
+          Math.cos(a)*0.16,1.30,Math.sin(a)*0.16,
+          Math.sin(a)*0.3,0,-Math.cos(a)*0.3);
+    }
+    // Eyes
+    [-0.11,0.11].forEach(x => {
+      add(new THREE.SphereGeometry(0.072,10,8), eyeM, x,1.07,0.24);
+      add(new THREE.SphereGeometry(0.036,8,6),  pupilM, x,1.07,0.30);
+      add(new THREE.SphereGeometry(0.016,6,6),
+          new THREE.MeshBasicMaterial({color:0xffaa77}), x+0.02,1.09,0.32);
+    });
+    // Vines
+    const vineM = _mat(col3);
+    [[-0.44,1.10,0.10,0,0,0.75],[0.44,1.10,0.10,0,0,-0.75],
+     [-0.38,0.50,0.20,0.3,0,0.65],[0.38,0.50,0.20,0.3,0,-0.65]].forEach(
+      ([px,py,pz,rx,ry,rz]) =>
+        add(new THREE.CylinderGeometry(0.018,0.010,0.28,6), vineM, px,py,pz,rx,ry,rz)
+    );
+    // Leaf sprouts
+    [-0.22,0.22].forEach(x =>
+      add(new THREE.SphereGeometry(0.06,6,6), greenBright, x,1.44,0, 0,0,0, 1.4,0.5,0.8)
+    );
+
+    g.scale.set(0.78,0.78,0.78);
+    g.position.y = 0.08;
+    return g;
+  }
+
+  return { spawn, onMarkerFound, onMarkerLost, playHit, dispose, resize };
 })();
 // ============================================================
 //  guardian.js — Player Guardian (hatched from seed)
@@ -1597,12 +1685,15 @@ const Battle = (() => {
 
   function _playHitEffect(target) {
     if (target === 'enemy') {
-      MonsterRenderer.playHit();
+      MonsterRenderer.playHit('enemy');
     } else {
+      MonsterRenderer.playHit('guardian');
+      // Also flash the sprite for non-marker mode
       const el = document.getElementById('guardian-sprite-wrap');
-      if (!el) return;
-      el.classList.add('hit-flash');
-      setTimeout(() => el.classList.remove('hit-flash'), 350);
+      if (el) {
+        el.classList.add('hit-flash');
+        setTimeout(() => el.classList.remove('hit-flash'), 350);
+      }
     }
   }
 
@@ -2035,21 +2126,24 @@ const Game = (() => {
       return;
     }
 
-    UI.showScreen('screen-battle');
-    UI.setBattleUI(true);
-    _startARScene();
-    setTimeout(_newEncounter, 300);
+    _startCamera().then(() => {
+      UI.showScreen('screen-battle');
+      UI.setBattleUI(true);
+      _setupMarker();
+      _newEncounter();
+    });
   }
 
   function exitBattle() {
     MonsterRenderer.dispose();
-    _stopARScene();
+    _stopCamera();
     UI.setBattleUI(false);
     UI.showScreen('screen-hub');
   }
 
   function nextEncounter() {
     State.get().encounterCount++;
+    MonsterRenderer.dispose();
     UI.showScreen('screen-battle');
     UI.setBattleUI(true);
     _newEncounter();
@@ -2062,25 +2156,41 @@ const Game = (() => {
     Battle.start(pick, level);
   }
 
-  function _startARScene() {
-    const scene = document.getElementById('ar-scene');
-    if (scene) {
-      scene.style.display = 'block';
-      // Re-enable AR.js if it was paused
-      const sys = scene.systems && scene.systems['arjs'];
-      if (sys && sys.start) sys.start();
+  function _setupMarker() {
+    // Use AR.js if available, otherwise skip
+    if (typeof AFRAME === 'undefined') return;
+    const marker = document.getElementById('ar-marker');
+    if (!marker) return;
+    marker.addEventListener('markerFound', () => MonsterRenderer.onMarkerFound());
+    marker.addEventListener('markerLost',  () => MonsterRenderer.onMarkerLost());
+  }
+
+  async function _startCamera() {
+    _stopCamera();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      _cameraStream = stream;
+      const vid = document.getElementById('ar-camera');
+      if (vid) { vid.srcObject = stream; vid.play(); }
+    } catch (e) {
+      console.warn('Camera unavailable:', e.message);
     }
   }
 
-  function _stopARScene() {
-    const scene = document.getElementById('ar-scene');
-    if (scene) scene.style.display = 'none';
-    MonsterRenderer.dispose();
+  function _stopCamera() {
+    if (_cameraStream) {
+      _cameraStream.getTracks().forEach(t => t.stop());
+      _cameraStream = null;
+    }
+    const vid = document.getElementById('ar-camera');
+    if (vid) vid.srcObject = null;
   }
 
   return { startGame, finishTutorial, enterBattle, exitBattle, nextEncounter };
 })();
-
     UI.switchDetailTab = (tab) => {
       document.querySelectorAll('#detail-tabs .tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('#screen-guardian-detail .tab-content').forEach(t => t.classList.remove('active'));
@@ -2088,13 +2198,9 @@ const Game = (() => {
       document.getElementById(`detail-tab-${tab}`)?.classList.add('active');
     };
 
-    // Hook up A-Frame marker events after scene loads
-    document.getElementById('ar-scene').addEventListener('loaded', () => {
-      const marker = document.getElementById('ar-marker');
-      if (marker) {
-        marker.addEventListener('markerFound', () => MonsterRenderer.onMarkerFound());
-        marker.addEventListener('markerLost',  () => MonsterRenderer.onMarkerLost());
-      }
+    window.addEventListener('resize', () => {
+      const c = document.getElementById('monster-canvas');
+      if (c && c.offsetWidth) MonsterRenderer.resize(c.offsetWidth, c.offsetHeight);
     });
   </script>
 </body>
