@@ -754,8 +754,6 @@ html, body {
       <span id="hub-guardian-count">0</span> Guardians &nbsp;·&nbsp;
       <span id="hub-water-count">0</span> 💧 &nbsp;·&nbsp;
       <span id="hub-sunlight-count">0</span> ☀️
-      &nbsp;·&nbsp;
-      <button onclick="UI.confirmReset()" style="background:none;border:none;color:#c05050;font-size:0.65rem;cursor:pointer;opacity:0.7;padding:0;">↺ Reset</button>
     </div>
   </div>
 
@@ -1153,14 +1151,12 @@ const DATA = {
   },
 };
 // ============================================================
-//  state.js — Centralised mutable game state + auto-save
+//  state.js — Centralised mutable game state
 // ============================================================
 
 const State = (() => {
 
-  const SAVE_KEY = 'eco_guardian_save';
-
-  const _default = {
+  const _state = {
     inventory: {
       water:               3,
       seed_pitcher_knight: 1,
@@ -1175,58 +1171,16 @@ const State = (() => {
     tutorialDone: false,
   };
 
-  // ── Load from localStorage or start fresh ────────────────
-  function _load() {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return JSON.parse(JSON.stringify(_default));
-      const saved = JSON.parse(raw);
-      // Restore Guardian class instances from plain objects
-      if (saved.guardians) {
-        saved.guardians = saved.guardians.map(g => {
-          const guardian = Object.assign(Object.create(Guardian.prototype), g);
-          return guardian;
-        });
-      }
-      return saved;
-    } catch (e) {
-      console.warn('Save load failed, starting fresh:', e);
-      return JSON.parse(JSON.stringify(_default));
-    }
-  }
-
-  let _state = _load();
-
-  // ── Auto-save after every mutation ───────────────────────
-  function _save() {
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(_state));
-    } catch (e) {
-      console.warn('Save failed:', e);
-    }
-  }
-
   return {
     get: () => _state,
 
-    hasSave() {
-      return !!localStorage.getItem(SAVE_KEY);
-    },
-
-    resetSave() {
-      localStorage.removeItem(SAVE_KEY);
-      _state = JSON.parse(JSON.stringify(_default));
-    },
-
     addItem(itemId, qty = 1) {
       _state.inventory[itemId] = (_state.inventory[itemId] || 0) + qty;
-      _save();
     },
 
     removeItem(itemId, qty = 1) {
       if (!this.hasItem(itemId, qty)) return false;
       _state.inventory[itemId] -= qty;
-      _save();
       return true;
     },
 
@@ -1242,18 +1196,15 @@ const State = (() => {
       const itemDef = DATA.items[seedItemId];
       if (!itemDef) return;
       _state.seeds.push({ seedItemId, monsterId: itemDef.monsterId });
-      _save();
     },
 
     removeSeed(index) {
       _state.seeds.splice(index, 1);
-      _save();
     },
 
     addGuardian(guardian) {
       _state.guardians.push(guardian);
       if (_state.activeGuardianIndex === null) _state.activeGuardianIndex = 0;
-      _save();
     },
 
     getActiveGuardian() {
@@ -1264,17 +1215,11 @@ const State = (() => {
     setActiveGuardian(index) {
       if (index >= 0 && index < _state.guardians.length) {
         _state.activeGuardianIndex = index;
-        _save();
       }
     },
 
     completeTutorial() {
       _state.tutorialDone = true;
-      _save();
-    },
-
-    saveNow() {
-      _save();
     },
   };
 })();
@@ -2357,13 +2302,6 @@ const UI = (() => {
     el._timer = setTimeout(() => el.classList.remove('show'), 2800);
   }
 
-  function confirmReset() {
-    if (confirm('Start over? All progress will be lost.')) {
-      State.resetSave();
-      location.reload();
-    }
-  }
-
   return {
     showScreen, setBattleUI: _setBattleUI,
     openBattle, openGarden, openInventory, closeToHub, exitBattle,
@@ -2423,7 +2361,6 @@ const Game = (() => {
 
   function nextEncounter() {
     State.get().encounterCount++;
-    State.saveNow();
     MonsterRenderer.dispose();
     UI.showScreen('screen-battle');
     UI.setBattleUI(true);
