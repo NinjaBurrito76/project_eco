@@ -8,7 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Eco Guardian</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- A-Frame + AR.js loaded in background — not activated until battle -->
   <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
@@ -675,7 +674,7 @@ html, body {
 #guardian-level-tag { font-size: 0.58rem; color: var(--c-amber); }
 #guardian-name { font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
 .a-enter-vr, .a-orientation-modal, .a-loader-title { display: none !important; }
-a-scene { display: none; }
+a-scene { display: none !important; }
   </style>
 </head>
 <body>
@@ -732,7 +731,7 @@ a-scene { display: none; }
         <div class="tutorial-step-num">4</div>
         <div class="tutorial-step-body">
           <div class="tutorial-step-title">Battle in AR!</div>
-          <div class="tutorial-step-desc">Enemy floats in AR by default. Point at a Hiro marker to place both fighters on a surface!</div>
+          <div class="tutorial-step-desc">Enemy floats in AR by default. Point at a printed Hiro marker to place both fighters on a surface!</div>
         </div>
         <div class="tutorial-step-icon">🌍</div>
       </div>
@@ -1090,9 +1089,9 @@ const MonsterRenderer = (() => {
     _floatT = 0;
     _markerMode = false;
 
-    _camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 100);
-    _camera.position.set(0, 1.4, 4.2);
-    _camera.lookAt(0, 0.9, 0);
+    _camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
+    _camera.position.set(0, 1.2, 3.5);
+    _camera.lookAt(0, 0.8, 0);
 
     _renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1113,9 +1112,10 @@ const MonsterRenderer = (() => {
     _enemyGroup.position.set(0, 0, 0);
     _scene.add(_enemyGroup);
 
-    // Shadow disc
+    // Shadow disc — at ground level right under feet
     _shadowE = _makeShadow();
-    _shadowE.position.set(0, -0.62, 0);
+    _shadowE.rotation.x = -Math.PI / 2;
+    _shadowE.position.set(0, 0.05, 0);
     _scene.add(_shadowE);
 
     _animate();
@@ -1126,8 +1126,11 @@ const MonsterRenderer = (() => {
     _floatT += 0.018;
 
     if (!_markerMode && _enemyGroup) {
-      _enemyGroup.position.y = Math.sin(_floatT) * 0.09;
+      _enemyGroup.position.y = 0.3 + Math.sin(_floatT) * 0.09;
       _enemyGroup.rotation.y += 0.007;
+      // Scale shadow based on height for depth effect
+      const scale = 0.8 + (1 - (Math.sin(_floatT) * 0.09 + 0.09) / 0.4) * 0.2;
+      if (_shadowE) _shadowE.scale.set(scale, scale, scale);
     } else if (_markerMode) {
       if (_enemyGroup)    _enemyGroup.rotation.y    = -Math.PI/2 + Math.sin(_floatT * 0.8) * 0.08;
       if (_guardianGroup) _guardianGroup.rotation.y =  Math.PI/2 + Math.sin(_floatT * 0.8 + 1) * 0.08;
@@ -1150,7 +1153,7 @@ const MonsterRenderer = (() => {
     // Move enemy to one side
     _enemyGroup.position.set(0.9, 0, 0);
     _enemyGroup.rotation.y = -Math.PI / 2;
-    _shadowE.position.set(0.9, -0.62, 0);
+    _shadowE.position.set(0.9, 0.05, 0);
 
     // Spawn guardian on other side
     _guardianGroup = _buildPKModel(true);
@@ -1159,7 +1162,8 @@ const MonsterRenderer = (() => {
     _scene.add(_guardianGroup);
 
     _shadowG = _makeShadow();
-    _shadowG.position.set(-0.9, -0.62, 0);
+    _shadowG.rotation.x = -Math.PI / 2;
+    _shadowG.position.set(-0.9, 0.05, 0);
     _scene.add(_shadowG);
 
     // Drop animation
@@ -1180,7 +1184,7 @@ const MonsterRenderer = (() => {
 
     _enemyGroup.position.set(0, 0, 0);
     _enemyGroup.rotation.y = 0;
-    _shadowE.position.set(0, -0.62, 0);
+    _shadowE.position.set(0, 0.05, 0);
 
     if (_guardianGroup) { _scene.remove(_guardianGroup); _guardianGroup = null; }
     if (_shadowG)       { _scene.remove(_shadowG);       _shadowG = null; }
@@ -1234,8 +1238,8 @@ const MonsterRenderer = (() => {
   // ── Helpers ───────────────────────────────────────────────
   function _makeShadow() {
     return new THREE.Mesh(
-      new THREE.CircleGeometry(0.65, 32),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })
+      new THREE.CircleGeometry(0.28, 32),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
     );
   }
 
@@ -2008,6 +2012,7 @@ const UI = (() => {
 const Game = (() => {
 
   let _cameraStream = null;
+  let _markerActive = false;
 
   function _enemyLevel() {
     return Math.min(10, 1 + Math.floor(State.get().encounterCount / 5));
@@ -2037,11 +2042,10 @@ const Game = (() => {
     _startCamera().then(() => {
       UI.showScreen('screen-battle');
       UI.setBattleUI(true);
-      // Small delay so canvas is in DOM and has dimensions
       setTimeout(() => {
         _newEncounter();
         _setupMarker();
-      }, 100);
+      }, 150);
     });
   }
 
@@ -2058,7 +2062,7 @@ const Game = (() => {
     MonsterRenderer.dispose();
     UI.showScreen('screen-battle');
     UI.setBattleUI(true);
-    setTimeout(_newEncounter, 100);
+    setTimeout(_newEncounter, 150);
   }
 
   function _newEncounter() {
@@ -2067,17 +2071,21 @@ const Game = (() => {
     Battle.start(pick, _enemyLevel());
   }
 
-  // ── Camera ────────────────────────────────────────────────
+  // ── Camera (our own stream for floating mode) ─────────────
   async function _startCamera() {
     _stopCamera();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       _cameraStream = stream;
       const vid = document.getElementById('ar-camera');
-      if (vid) { vid.srcObject = stream; vid.play(); }
+      if (vid) {
+        vid.srcObject = stream;
+        vid.style.display = 'block';
+        await vid.play();
+      }
     } catch (e) {
       console.warn('Camera unavailable:', e.message);
     }
@@ -2089,50 +2097,75 @@ const Game = (() => {
       _cameraStream = null;
     }
     const vid = document.getElementById('ar-camera');
-    if (vid) vid.srcObject = null;
+    if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
   }
 
-  // ── Marker (A-Frame) — created dynamically ────────────────
+  // ── Marker setup ──────────────────────────────────────────
+  // Key insight: AR.js needs exclusive camera access.
+  // We stop our stream, let AR.js take the camera, then resume ours when marker lost.
   function _setupMarker() {
+    if (typeof AFRAME === 'undefined') {
+      // Retry until A-Frame loads
+      setTimeout(_setupMarker, 800);
+      return;
+    }
     _teardownMarker();
 
-    // A-Frame might still be loading — wait for it
-    const trySetup = (attempts) => {
-      if (typeof AFRAME === 'undefined') {
-        if (attempts > 0) setTimeout(() => trySetup(attempts - 1), 500);
-        return;
-      }
+    const scene = document.createElement('a-scene');
+    scene.id = 'ar-scene';
+    scene.setAttribute('embedded', '');
+    scene.setAttribute('arjs', [
+      'sourceType: webcam',
+      'debugUIEnabled: false',
+      'patternRatio: 0.75',
+      'trackingMethod: best',
+    ].join('; '));
+    scene.setAttribute('vr-mode-ui', 'enabled: false');
+    scene.setAttribute('renderer', 'logarithmicDepthBuffer: true; alpha: true;');
+    // Hidden by default — only shown when marker scanning
+    scene.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;display:none;';
 
-      const scene = document.createElement('a-scene');
-      scene.id = 'ar-scene';
-      scene.setAttribute('embedded', '');
-      scene.setAttribute('arjs', 'sourceType: webcam; debugUIEnabled: false; patternRatio: 0.75;');
-      scene.setAttribute('vr-mode-ui', 'enabled: false');
-      scene.setAttribute('renderer', 'logarithmicDepthBuffer: true;');
-      scene.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;display:block;';
+    const marker = document.createElement('a-marker');
+    marker.id = 'ar-marker';
+    marker.setAttribute('preset', 'hiro');
+    marker.setAttribute('emitevents', 'true');
+    scene.appendChild(marker);
 
-      const marker = document.createElement('a-marker');
-      marker.id = 'ar-marker';
-      marker.setAttribute('preset', 'hiro');
-      marker.setAttribute('emitevents', 'true');
-      scene.appendChild(marker);
+    const cam = document.createElement('a-entity');
+    cam.setAttribute('camera', '');
+    scene.appendChild(cam);
 
-      const cam = document.createElement('a-entity');
-      cam.setAttribute('camera', '');
-      scene.appendChild(cam);
+    document.body.appendChild(scene);
 
-      document.body.appendChild(scene);
+    scene.addEventListener('loaded', () => {
+      console.log('AR.js scene loaded');
 
-      scene.addEventListener('loaded', () => {
-        marker.addEventListener('markerFound', () => MonsterRenderer.onMarkerFound());
-        marker.addEventListener('markerLost',  () => MonsterRenderer.onMarkerLost());
+      marker.addEventListener('markerFound', () => {
+        if (_markerActive) return;
+        _markerActive = true;
+
+        // Stop our camera, let AR.js use it — show AR scene as background
+        _stopCamera();
+        scene.style.display = 'block';
+
+        MonsterRenderer.onMarkerFound();
       });
-    };
 
-    trySetup(10); // retry up to 10 times × 500ms = 5 seconds
+      marker.addEventListener('markerLost', () => {
+        if (!_markerActive) return;
+        _markerActive = false;
+
+        // Hide AR scene, restart our camera
+        scene.style.display = 'none';
+        _startCamera();
+
+        MonsterRenderer.onMarkerLost();
+      });
+    });
   }
 
   function _teardownMarker() {
+    _markerActive = false;
     const old = document.getElementById('ar-scene');
     if (old) old.remove();
   }
