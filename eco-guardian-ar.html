@@ -112,12 +112,12 @@
 <!-- AR.js owns the full scene — Hiro marker triggers monster -->
 <a-scene
   embedded
-  arjs="sourceType: webcam; debugUIEnabled: false; patternRatio: 0.75; trackingMethod: best;"
+  arjs="sourceType: webcam; debugUIEnabled: false; patternRatio: 0.75; trackingMethod: best; maxDetectionRate: 60; canvasWidth: 640; canvasHeight: 480;"
   vr-mode-ui="enabled: false"
   renderer="logarithmicDepthBuffer: true; alpha: true;">
 
   <!-- Hiro marker — monster appears here -->
-  <a-marker id="main-marker" preset="hiro" emitevents="true">
+  <a-marker id="main-marker" preset="kanji" emitevents="true">
 
     <!-- Enemy Pitcher-Knight (red eyes) -->
     <a-entity id="enemy-entity" position="0.6 0 0" rotation="0 -90 0" scale="0.5 0.5 0.5">
@@ -230,7 +230,7 @@
   </div>
 
   <div id="marker-hint">
-    <div id="marker-hint-text">🎯 Point at Hiro marker to place fighters</div>
+    <div id="marker-hint-text">🎯 Point at Kanji marker to place fighters</div>
   </div>
 
   <div id="hud-bottom">
@@ -257,6 +257,10 @@
 </div>
 
 <div id="toast"></div>
+<div id="debug-bar" style="position:fixed;bottom:0;left:0;right:0;background:#000a;color:#0f0;
+  font-size:11px;padding:4px 8px;z-index:2000;font-family:monospace;pointer-events:none;">
+  AR.js loading...
+</div>
 
 <script>
 // ── Game state (passed from main game via URL params or sessionStorage) ──
@@ -293,6 +297,14 @@ document.getElementById('guardian-hpnum').textContent = `${gHp}/${gMax}`;
 
 // ── Marker events ──
 const marker = document.getElementById('main-marker');
+// Debug updates
+const dbg = document.getElementById('debug-bar');
+let scanCount = 0;
+setInterval(() => {
+  scanCount++;
+  if (dbg) dbg.textContent = `Scanning... ${scanCount}s | Marker: ${markerSeen ? '✅ FOUND' : '❌ not found'} | Ensure Hiro marker is visible, well-lit, flat`;
+}, 1000);
+
 marker.addEventListener('markerFound', () => {
   markerSeen = true;
   document.getElementById('marker-hint-text').classList.add('hidden');
