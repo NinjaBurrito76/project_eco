@@ -683,7 +683,6 @@ html, body {
       <button class="btn-begin" onclick="Game.startGame()">▶ Begin Journey</button>
     </div>
   </div>
-
   <div id="screen-tutorial" class="screen">
     <div class="tutorial-header">
       <div class="tutorial-icon">🌿</div>
@@ -698,65 +697,22 @@ html, body {
       </div>
     </div>
     <div class="tutorial-steps">
-      <div class="tutorial-step">
-        <div class="tutorial-step-num">1</div>
-        <div class="tutorial-step-body">
-          <div class="tutorial-step-title">Go to Garden → Hatchery</div>
-          <div class="tutorial-step-desc">You have a Pitcher Seed waiting. Head to your Garden and open the Hatchery tab.</div>
-        </div>
-        <div class="tutorial-step-icon">🌱</div>
-      </div>
-      <div class="tutorial-step">
-        <div class="tutorial-step-num">2</div>
-        <div class="tutorial-step-body">
-          <div class="tutorial-step-title">Hatch your seed</div>
-          <div class="tutorial-step-desc">Use your 3 💧 Water to hatch the Pitcher Seed into a Pitcher-Knight Guardian.</div>
-        </div>
-        <div class="tutorial-step-icon">🥚</div>
-      </div>
-      <div class="tutorial-step">
-        <div class="tutorial-step-num">3</div>
-        <div class="tutorial-step-body">
-          <div class="tutorial-step-title">Deploy your Guardian</div>
-          <div class="tutorial-step-desc">Go to the Team tab and tap Deploy to send your Guardian into battle.</div>
-        </div>
-        <div class="tutorial-step-icon">⚔️</div>
-      </div>
-      <div class="tutorial-step">
-        <div class="tutorial-step-num">4</div>
-        <div class="tutorial-step-body">
-          <div class="tutorial-step-title">Battle 10 plant-monsters!</div>
-          <div class="tutorial-step-desc">Defeat or capture them all. Every victory drops 💧 Water and ☀️ Sunlight!</div>
-        </div>
-        <div class="tutorial-step-icon">🌍</div>
-      </div>
+      <div class="tutorial-step"><div class="tutorial-step-num">1</div><div class="tutorial-step-body"><div class="tutorial-step-title">Go to Garden → Hatchery</div><div class="tutorial-step-desc">You have a Pitcher Seed waiting. Head to your Garden and open the Hatchery tab.</div></div><div class="tutorial-step-icon">🌱</div></div>
+      <div class="tutorial-step"><div class="tutorial-step-num">2</div><div class="tutorial-step-body"><div class="tutorial-step-title">Hatch your seed</div><div class="tutorial-step-desc">Use your 3 💧 Water to hatch the Pitcher Seed into a Pitcher-Knight Guardian.</div></div><div class="tutorial-step-icon">🥚</div></div>
+      <div class="tutorial-step"><div class="tutorial-step-num">3</div><div class="tutorial-step-body"><div class="tutorial-step-title">Deploy your Guardian</div><div class="tutorial-step-desc">Go to the Team tab and tap Deploy to send your Guardian into battle.</div></div><div class="tutorial-step-icon">⚔️</div></div>
+      <div class="tutorial-step"><div class="tutorial-step-num">4</div><div class="tutorial-step-body"><div class="tutorial-step-title">Battle 10 plant-monsters!</div><div class="tutorial-step-desc">Defeat or capture them all. Every victory drops 💧 Water and ☀️ Sunlight!</div></div><div class="tutorial-step-icon">🌍</div></div>
     </div>
     <button class="btn-begin" onclick="Game.finishTutorial()">Let's Go! →</button>
   </div>
-
   <div id="screen-hub" class="screen">
     <div class="hub-header"><div class="hub-title">ECO GUARDIAN</div></div>
     <div class="hub-body">
-      <button class="hub-btn hub-btn-battle" onclick="UI.openBattle()">
-        <div class="hub-btn-icon">⚔️</div>
-        <div><div class="hub-btn-label">Battle</div><div class="hub-btn-sub">Fight monsters in AR</div></div>
-      </button>
-      <button class="hub-btn hub-btn-garden" onclick="UI.openGarden()">
-        <div class="hub-btn-icon">🌱</div>
-        <div><div class="hub-btn-label">Garden</div><div class="hub-btn-sub">Hatch seeds &amp; manage team</div></div>
-      </button>
-      <button class="hub-btn hub-btn-inventory" onclick="UI.openInventory()">
-        <div class="hub-btn-icon">🎒</div>
-        <div><div class="hub-btn-label">Inventory</div><div class="hub-btn-sub">Items &amp; seeds</div></div>
-      </button>
+      <button class="hub-btn hub-btn-battle" onclick="UI.openBattle()"><div class="hub-btn-icon">⚔️</div><div><div class="hub-btn-label">Battle</div><div class="hub-btn-sub">Fight monsters in AR</div></div></button>
+      <button class="hub-btn hub-btn-garden" onclick="UI.openGarden()"><div class="hub-btn-icon">🌱</div><div><div class="hub-btn-label">Garden</div><div class="hub-btn-sub">Hatch seeds &amp; manage team</div></div></button>
+      <button class="hub-btn hub-btn-inventory" onclick="UI.openInventory()"><div class="hub-btn-icon">🎒</div><div><div class="hub-btn-label">Inventory</div><div class="hub-btn-sub">Items &amp; seeds</div></div></button>
     </div>
-    <div class="hub-footer">
-      <span id="hub-guardian-count">0</span> Guardians &nbsp;·&nbsp;
-      <span id="hub-water-count">0</span> 💧 &nbsp;·&nbsp;
-      <span id="hub-sunlight-count">0</span> ☀️
-    </div>
+    <div class="hub-footer"><span id="hub-guardian-count">0</span> Guardians &nbsp;·&nbsp;<span id="hub-water-count">0</span> 💧 &nbsp;·&nbsp;<span id="hub-sunlight-count">0</span> ☀️</div>
   </div>
-
   <div id="screen-battle" class="screen">
     <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
@@ -766,35 +722,22 @@ html, body {
     </div>
     <div id="effects-layer"></div>
   </div>
-
   <div id="hud-top">
     <button class="btn-exit-battle" onclick="UI.exitBattle()">✕</button>
     <div class="hud-enemy-block">
       <span id="hud-enemy-name">—</span>
-      <div class="hp-bar-wrap">
-        <div class="hp-bar-label">HP</div>
-        <div class="hp-bar-track"><div id="enemy-hp-bar" class="hp-bar-fill enemy" style="width:100%"></div></div>
-        <span id="enemy-hp-text">—</span>
-      </div>
+      <div class="hp-bar-wrap"><div class="hp-bar-label">HP</div><div class="hp-bar-track"><div id="enemy-hp-bar" class="hp-bar-fill enemy" style="width:100%"></div></div><span id="enemy-hp-text">—</span></div>
     </div>
     <div id="hud-turn-badge">YOUR TURN</div>
   </div>
-
   <div id="battle-bottom">
     <div id="battle-info-row">
       <div id="hud-guardian">
         <div id="guardian-sprite-wrap"><div id="guardian-sprite">🌿</div></div>
         <div id="guardian-info">
           <span id="guardian-name">No Guardian</span>
-          <div class="hp-bar-wrap mini">
-            <div class="hp-bar-label">HP</div>
-            <div class="hp-bar-track"><div id="guardian-hp-bar" class="hp-bar-fill guardian" style="width:0%"></div></div>
-            <span id="guardian-hp-text">—</span>
-          </div>
-          <div id="guardian-bottom-row">
-            <span id="guardian-level-tag">Lv —</span>
-            <span id="guardian-hp-text-inline">—</span>
-          </div>
+          <div class="hp-bar-wrap mini"><div class="hp-bar-label">HP</div><div class="hp-bar-track"><div id="guardian-hp-bar" class="hp-bar-fill guardian" style="width:0%"></div></div><span id="guardian-hp-text">—</span></div>
+          <div id="guardian-bottom-row"><span id="guardian-level-tag">Lv —</span><span id="guardian-hp-text-inline">—</span></div>
         </div>
       </div>
       <div id="battle-log-box"><p id="battle-log-text">A monster appears!</p></div>
@@ -804,7 +747,6 @@ html, body {
       <button class="btn-action" id="btn-capture" onclick="Battle.attemptCapture()">🌱 Capture</button>
     </div>
   </div>
-
   <div id="screen-result" class="screen">
     <div id="result-content">
       <h2 id="result-title">Victory!</h2>
@@ -815,12 +757,8 @@ html, body {
       </div>
     </div>
   </div>
-
   <div id="screen-garden" class="screen panel-screen">
-    <div class="panel-header">
-      <button class="btn-back" onclick="UI.closeToHub()">← Back</button>
-      <h2>Garden</h2>
-    </div>
+    <div class="panel-header"><button class="btn-back" onclick="UI.closeToHub()">← Back</button><h2>Garden</h2></div>
     <div id="garden-tabs">
       <button class="tab active" data-tab="team"    onclick="UI.switchGardenTab('team')">🌿 Team</button>
       <button class="tab"        data-tab="hatchery" onclick="UI.switchGardenTab('hatchery')">🥚 Hatchery</button>
@@ -828,12 +766,8 @@ html, body {
     <div id="garden-tab-team"     class="tab-content active"><div id="garden-team-list"></div></div>
     <div id="garden-tab-hatchery" class="tab-content">       <div id="garden-hatch-list"></div></div>
   </div>
-
   <div id="screen-guardian-detail" class="screen panel-screen">
-    <div class="panel-header">
-      <button class="btn-back" onclick="UI.closeDetail()">← Back</button>
-      <h2 id="detail-guardian-name">Guardian</h2>
-    </div>
+    <div class="panel-header"><button class="btn-back" onclick="UI.closeDetail()">← Back</button><h2 id="detail-guardian-name">Guardian</h2></div>
     <div id="detail-tabs">
       <button class="tab active" data-tab="info" onclick="UI.switchDetailTab('info')">📋 Info</button>
       <button class="tab"        data-tab="bio"  onclick="UI.switchDetailTab('bio')">🌿 Bio</button>
@@ -843,17 +777,11 @@ html, body {
     <div id="detail-tab-bio"  class="tab-content"></div>
     <div id="detail-tab-feed" class="tab-content"></div>
   </div>
-
   <div id="screen-inventory" class="screen panel-screen">
-    <div class="panel-header">
-      <button class="btn-back" onclick="UI.closeToHub()">← Back</button>
-      <h2>Inventory</h2>
-    </div>
+    <div class="panel-header"><button class="btn-back" onclick="UI.closeToHub()">← Back</button><h2>Inventory</h2></div>
     <div class="item-grid" id="inventory-grid"></div>
   </div>
-
   <div id="toast"></div>
-
   <script>
 // ============================================================
 //  data.js — Static game data
@@ -1348,7 +1276,7 @@ const MonsterRenderer = (() => {
       new THREE.MeshBasicMaterial({ color:0x000000, transparent:true, opacity:0.4 })
     );
     _shadow.rotation.x = -Math.PI/2;
-    _shadow.position.set(0, 0.06, 0);
+    _shadow.position.set(0, -0.55, 0);
     _scene.add(_shadow);
 
     _animate();
@@ -1358,12 +1286,12 @@ const MonsterRenderer = (() => {
     _animFrame = requestAnimationFrame(_animate);
     _floatT += 0.018;
     if (_monster) {
-      _monster.position.y = 0.4 + Math.sin(_floatT) * 0.09;
+      _monster.position.y = -0.1 + Math.sin(_floatT) * 0.09;
       _monster.rotation.y += 0.007;
       if (_shadow) {
         const s = 0.85 + Math.sin(_floatT) * 0.12;
         _shadow.scale.set(s, s, s);
-        _shadow.material.opacity = 0.25 + (1-s) * 0.3;
+        _shadow.material.opacity = 0.3 + (1 - s) * 0.35;
       }
     }
     if (_renderer && _scene && _camera) _renderer.render(_scene, _camera);
@@ -1450,7 +1378,7 @@ const MonsterRenderer = (() => {
       A(g,new THREE.SphereGeometry(0.036,8,6),pupil,x,1.07,0.30);
     });
     [[-0.44,1.10,0.10,0,0,0.75],[0.44,1.10,0.10,0,0,-0.75]].forEach(([px,py,pz,rx,ry,rz])=>A(g,new THREE.CylinderGeometry(0.018,0.010,0.28,6),gB,px,py,pz,rx,ry,rz));
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1471,7 +1399,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.CylinderGeometry(0.05,0.07,0.35,6),grn,-0.05,0.65,-0.2,-0.5,0,0.5);
     A(g,new THREE.SphereGeometry(0.05,8,6),ylw,0.28,1.0,0.16);
     A(g,new THREE.SphereGeometry(0.05,8,6),ylw,0.28,1.0,-0.16);
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1487,7 +1415,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.SphereGeometry(0.06,8,6),face, 0.12,0.75,0.38);
     A(g,new THREE.SphereGeometry(0.03,6,6),M(0x111111),-0.12,0.75,0.43);
     A(g,new THREE.SphereGeometry(0.03,6,6),M(0x111111), 0.12,0.75,0.43);
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1525,7 +1453,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.CylinderGeometry(0.03,0.07,0.55,6),vine,-0.4,0.52,0,0,0,Math.PI/4);
     for(let i=0;i<8;i++){const a=i/8*Math.PI*2;A(g,new THREE.ConeGeometry(0.025,0.12,4),thorn,Math.cos(a)*0.28,0.55+Math.sin(a)*0.12,Math.sin(a)*0.22,a,0,0);}
     for(let i=0;i<5;i++){A(g,new THREE.SphereGeometry(0.04,6,6),berry,(Math.random()-0.5)*0.4,0.45+Math.random()*0.3,(Math.random()-0.5)*0.3);}
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1547,7 +1475,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.CylinderGeometry(0.04,0.06,0.4,6),grn,-0.2,0.75,0,0,0,0.7);
     A(g,new THREE.CylinderGeometry(0.04,0.06,0.4,6),grn, 0.2,0.75,0,0,0,-0.7);
     [-0.1,0.1].forEach(x=>A(g,new THREE.SphereGeometry(0.08,8,6),grn,x,0.06,0.06));
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1583,7 +1511,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.CylinderGeometry(0.03,0.06,0.45,6),pale,-0.2,0.68,0,0,0,0.5);
     A(g,new THREE.CylinderGeometry(0.03,0.06,0.45,6),pale, 0.2,0.68,0,0,0,-0.5);
     for(let i=0;i<5;i++){const a=i/5*Math.PI*2;A(g,new THREE.CylinderGeometry(0.02,0.01,0.3,4),dp,Math.cos(a)*0.12,0.06,Math.sin(a)*0.12,0.4*Math.cos(a),0,0.4*Math.sin(a));}
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1602,7 +1530,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.SphereGeometry(0.05,8,6),org,-0.04,0.82,0.18);
     A(g,new THREE.SphereGeometry(0.05,8,6),org, 0.08,0.82,0.16);
     [-0.16,0.16].forEach(x=>A(g,new THREE.SphereGeometry(0.1,8,6),dCac,x,0.06,0));
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -1622,7 +1550,7 @@ const MonsterRenderer = (() => {
     A(g,new THREE.SphereGeometry(0.04,8,6),eye, 0.07,0.80,0.14,0,0,0,1,0.4,1);
     A(g,new THREE.SphereGeometry(0.07,8,6),cream,0,0.38,0.22);
     A(g,new THREE.TorusGeometry(0.22,0.02,6,24),gold,0,1.04,0);
-    g.scale.set(0.78,0.78,0.78); return g;
+    g.scale.set(1.4,1.4,1.4); return g;
   }
 
   return { spawn, dispose, playHit, resize };
