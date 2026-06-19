@@ -761,8 +761,9 @@ html, body {
     <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
     <div id="enemy-stage">
-      <div id="enemy-model-wrap"><canvas id="monster-canvas"></canvas></div>
-      <div id="enemy-shadow"></div>
+      <div id="enemy-model-wrap">
+        <canvas id="monster-canvas"></canvas>
+      </div>
       <div id="enemy-name-tag"></div>
     </div>
     <div id="effects-layer"></div>
@@ -1293,29 +1294,46 @@ const MonsterRenderer = (() => {
   // ── spawn ─────────────────────────────────────────────────
   function spawn(monsterId) {
     if (_renderer) dispose();
-    // Wait one frame so canvas has layout
-    requestAnimationFrame(() => _init(monsterId));
+    // Retry until canvas has real dimensions
+    let attempts = 0;
+    const tryInit = () => {
+      const c = document.getElementById('monster-canvas');
+      const p = c && c.parentElement;
+      if (p && p.offsetWidth > 10 && p.offsetHeight > 10) {
+        _init(monsterId);
+      } else if (++attempts < 20) {
+        setTimeout(tryInit, 80);
+      }
+    };
+    setTimeout(tryInit, 100);
   }
 
   function _init(monsterId) {
     const canvas = document.getElementById('monster-canvas');
     if (!canvas) return;
 
-    const W = window.innerWidth;
-    const H = Math.round(window.innerHeight * 0.55);
-    canvas.width  = W; canvas.height = H;
-    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    // Force canvas to fill its parent container
+    const parent = canvas.parentElement;
+    const W = parent ? parent.offsetWidth  || window.innerWidth  : window.innerWidth;
+    const H = parent ? parent.offsetHeight || Math.round(window.innerHeight * 0.52) : Math.round(window.innerHeight * 0.52);
+    // Fallback if parent has no height yet
+    const FW = W  > 10 ? W  : window.innerWidth;
+    const FH = H  > 10 ? H  : Math.round(window.innerHeight * 0.52);
+    canvas.width  = FW; canvas.height = FH;
+    canvas.style.width  = FW + 'px';
+    canvas.style.height = FH + 'px';
+    const realW = FW, realH = FH;
 
     _scene  = new THREE.Scene();
     _floatT = 0;
 
-    _camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
+    _camera = new THREE.PerspectiveCamera(50, realW/realH, 0.1, 100);
     _camera.position.set(0, 1.6, 3.8);
     _camera.lookAt(0, 0.9, 0);
 
     _renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
     _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    _renderer.setSize(W, H, false);
+    _renderer.setSize(realW, realH, false);
     _renderer.setClearColor(0x000000, 0);
 
     _scene.add(new THREE.AmbientLight(0x88ccaa, 0.8));
@@ -1380,7 +1398,7 @@ const MonsterRenderer = (() => {
     if (!_renderer || !_camera) return;
     const W = window.innerWidth, H = Math.round(window.innerHeight * 0.55);
     _camera.aspect = W/H; _camera.updateProjectionMatrix();
-    _renderer.setSize(W, H, false);
+    _renderer.setSize(realW, realH, false);
   }
 
   // ── model router ──────────────────────────────────────────
