@@ -727,7 +727,7 @@ html, body {
         <div class="tutorial-step-num">4</div>
         <div class="tutorial-step-body">
           <div class="tutorial-step-title">Battle in AR!</div>
-          <div class="tutorial-step-desc">Point at a printed Hiro marker — both fighters appear on the surface facing each other!</div>
+          <div class="tutorial-step-desc">10 wild plant-monsters roam the world. Defeat them, capture their seeds, and grow your team!</div>
         </div>
         <div class="tutorial-step-icon">🌍</div>
       </div>
@@ -740,7 +740,7 @@ html, body {
     <div class="hub-body">
       <button class="hub-btn hub-btn-battle" onclick="UI.openBattle()">
         <div class="hub-btn-icon">⚔️</div>
-        <div><div class="hub-btn-label">Battle</div><div class="hub-btn-sub">Enter AR mode &amp; fight</div></div>
+        <div><div class="hub-btn-label">Battle</div><div class="hub-btn-sub">Fight monsters in AR</div></div>
       </button>
       <button class="hub-btn hub-btn-garden" onclick="UI.openGarden()">
         <div class="hub-btn-icon">🌱</div>
@@ -758,9 +758,8 @@ html, body {
     </div>
   </div>
 
-  <!-- Battle screen kept for fallback / result display -->
   <div id="screen-battle" class="screen">
-    <video id="ar-camera" autoplay playsinline muted style="display:none"></video>
+    <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
     <div id="enemy-stage">
       <div id="enemy-model-wrap"><canvas id="monster-canvas"></canvas></div>
@@ -865,66 +864,283 @@ html, body {
 const DATA = {
 
   items: {
-    water: {
-      id: 'water', name: 'Water', icon: '💧',
-      description: 'Used to hatch seeds into Guardians.',
-      type: 'consumable',
-    },
-    sunlight: {
-      id: 'sunlight', name: 'Sunlight', icon: '☀️',
-      description: 'Used to level up your Guardians.',
-      type: 'consumable',
-    },
-    seed_pitcher_knight: {
-      id: 'seed_pitcher_knight', name: 'Pitcher Seed', icon: '🌰',
-      description: 'A heavy, dark seed from a Pitcher-Knight.',
-      type: 'seed',
-      monsterId: 'pitcher_knight',
-    },
+    water:    { id:'water',    name:'Water',    icon:'💧', description:'Used to hatch seeds.',    type:'consumable' },
+    sunlight: { id:'sunlight', name:'Sunlight', icon:'☀️', description:'Used to level up Guardians.', type:'consumable' },
+    seed_pitcher_knight:  { id:'seed_pitcher_knight',  name:'Pitcher Seed',   icon:'🌰', description:'A heavy dark seed.',         type:'seed', monsterId:'pitcher_knight'  },
+    seed_snap_drake:      { id:'seed_snap_drake',      name:'Snap Seed',      icon:'🌱', description:'A tiny jaw-shaped seed.',    type:'seed', monsterId:'snap_drake'      },
+    seed_puffer_fern:     { id:'seed_puffer_fern',     name:'Puff Spore',     icon:'🍄', description:'A round spore pod.',         type:'seed', monsterId:'puffer_fern'     },
+    seed_rafflesia_king:  { id:'seed_rafflesia_king',  name:'Rafflesia Bud',  icon:'🌺', description:'A heavy flower bud.',        type:'seed', monsterId:'rafflesia_king'  },
+    seed_bramble_cat:     { id:'seed_bramble_cat',     name:'Bramble Seed',   icon:'🫐', description:'A thorny little seed.',      type:'seed', monsterId:'bramble_cat'     },
+    seed_sun_beamer:      { id:'seed_sun_beamer',      name:'Sun Seed',       icon:'🌻', description:'A bright yellow seed.',      type:'seed', monsterId:'sun_beamer'      },
+    seed_baobab_sentinel: { id:'seed_baobab_sentinel', name:'Baobab Nut',     icon:'🌳', description:'A massive hardened nut.',    type:'seed', monsterId:'baobab_sentinel' },
+    seed_willow_weeper:   { id:'seed_willow_weeper',   name:'Willow Wisp',    icon:'🍃', description:'A pale, drifting seed.',     type:'seed', monsterId:'willow_weeper'   },
+    seed_cactus_sentry:   { id:'seed_cactus_sentry',   name:'Cactus Spine',   icon:'🌵', description:'A sharp spine-seed.',        type:'seed', monsterId:'cactus_sentry'   },
+    seed_lotus_monk:      { id:'seed_lotus_monk',      name:'Lotus Gem',      icon:'🪷', description:'A perfect pearl-like seed.', type:'seed', monsterId:'lotus_monk'      },
   },
 
   monsters: {
+    // ── 1. Pitcher-Knight (Tank) ──────────────────────────
     pitcher_knight: {
-      id: 'pitcher_knight',
-      name: 'Pitcher-Knight',
-      species: 'Nepenthes rajah',
-      archetype: 'tank',
-      description: 'An armored, heavy-set plant monster. Its torso is a deep pitcher, and it wears its lid like a helmet. A natural tank.',
+      id:'pitcher_knight', name:'Pitcher-Knight', species:'Nepenthes rajah',
+      archetype:'tank', description:'An armored, heavy-set plant monster. Its torso is a deep pitcher and it wears its lid like a helmet.',
       bio: {
-        realName: 'Nepenthes (Tropical Pitcher Plant)',
-        habitat: 'Tropical rainforests of Southeast Asia, particularly Borneo, Sumatra, and the Philippines.',
-        funFacts: [
-          'Nepenthes pitchers can hold up to 3.5 litres of digestive fluid — enough to drown small mammals.',
-          'They are carnivorous, luring insects and even small vertebrates into their pitcher with sweet nectar along the rim.',
-          'Some species form a symbiotic relationship with tree shrews, who eat nectar from the lid while their droppings fertilise the plant.',
-          'The digestive enzymes inside the pitcher are so effective they can dissolve an insect within hours.',
+        realName:'Nepenthes (Tropical Pitcher Plant)',
+        habitat:'Tropical rainforests of Southeast Asia — Borneo, Sumatra, the Philippines.',
+        funFacts:[
+          'Nepenthes pitchers can hold up to 3.5 litres of digestive fluid.',
+          'They lure insects with sweet nectar along the rim before drowning them.',
+          'Some species form a symbiotic relationship with tree shrews.',
           'Nepenthes rajah holds the record for the largest pitcher of any carnivorous plant.',
         ],
-        conservationStatus: 'Vulnerable (some species Critically Endangered)',
-        trivia: 'The name Nepenthes comes from Greek mythology — a drug of forgetfulness mentioned in Homer\'s Odyssey.',
+        conservationStatus:'Vulnerable (some species Critically Endangered)',
+        trivia:'The name Nepenthes comes from Greek mythology — a drug of forgetfulness in Homer\'s Odyssey.',
       },
-      baseStats: { hp: 50, attack: 8, defense: 2 },
-      dropTable: [
-        { itemId: 'water',               rate: 0.80, qty: [1, 3] },
-        { itemId: 'sunlight',            rate: 0.50, qty: [1, 2] },
-        { itemId: 'seed_pitcher_knight', rate: 0.35, qty: [1, 1] },
+      baseStats:{ hp:50, attack:8, defense:4 },
+      dropTable:[
+        { itemId:'water',               rate:0.80, qty:[1,3] },
+        { itemId:'sunlight',            rate:0.50, qty:[1,2] },
+        { itemId:'seed_pitcher_knight', rate:0.35, qty:[1,1] },
       ],
-      captureRate: 0.55,
-      statScale: { hp: 1.06, attack: 1.05, defense: 1.04 },
-      palette: {
-        primary: '#4a7c59', secondary: '#2e5c3f',
-        armor: '#8b7355', lid: '#5c4a2e',
-        pitcher: '#1a4a2e', eyes: '#ff6b35',
+      captureRate:0.55, statScale:{ hp:1.06, attack:1.05, defense:1.04 },
+    },
+
+    // ── 2. Snap-Drake (Attacker) ──────────────────────────
+    snap_drake: {
+      id:'snap_drake', name:'Snap-Drake', species:'Dionaea muscipula',
+      archetype:'attacker', description:'A bipedal raptor-style creature with a head that is one giant Venus Flytrap, snapping at anything that moves.',
+      bio: {
+        realName:'Venus Flytrap (Dionaea muscipula)',
+        habitat:'Subtropical wetlands of North and South Carolina, USA.',
+        funFacts:[
+          'The trap snaps shut in as little as 0.1 seconds — one of the fastest movements in the plant kingdom.',
+          'Each trap can only open and close a limited number of times before it dies.',
+          'Trigger hairs must be touched twice within 20 seconds to activate the trap.',
+          'After closing, the trap seals tightly and releases digestive enzymes.',
+        ],
+        conservationStatus:'Vulnerable',
+        trivia:'Charles Darwin called the Venus Flytrap "one of the most wonderful plants in the world."',
       },
+      baseStats:{ hp:35, attack:14, defense:1 },
+      dropTable:[
+        { itemId:'water',          rate:0.75, qty:[1,2] },
+        { itemId:'sunlight',       rate:0.45, qty:[1,2] },
+        { itemId:'seed_snap_drake',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.50, statScale:{ hp:1.05, attack:1.08, defense:1.03 },
+    },
+
+    // ── 3. Puffer-Fern (Balanced) ─────────────────────────
+    puffer_fern: {
+      id:'puffer_fern', name:'Puffer-Fern', species:'Lycoperdon perlatum',
+      archetype:'balanced', description:'A round bouncy creature that looks like a fluffy dandelion ball — until it gets angry and releases a toxic spore cloud.',
+      bio: {
+        realName:'Puffball Mushroom (Lycoperdon perlatum)',
+        habitat:'Forests, grasslands, and meadows worldwide.',
+        funFacts:[
+          'When mature, a single puffball can release trillions of spores in one puff.',
+          'Giant puffballs (Calvatia gigantea) can grow larger than a human head.',
+          'Young puffballs are edible and considered a delicacy in many cultures.',
+          'The spores can travel miles on the wind to colonise new areas.',
+        ],
+        conservationStatus:'Least Concern',
+        trivia:'Ancient people used dried puffball spores to stop bleeding wounds.',
+      },
+      baseStats:{ hp:45, attack:10, defense:3 },
+      dropTable:[
+        { itemId:'water',           rate:0.80, qty:[1,3] },
+        { itemId:'sunlight',        rate:0.55, qty:[1,2] },
+        { itemId:'seed_puffer_fern',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.55, statScale:{ hp:1.06, attack:1.06, defense:1.05 },
+    },
+
+    // ── 4. Rafflesia King (Tank) ──────────────────────────
+    rafflesia_king: {
+      id:'rafflesia_king', name:'Rafflesia King', species:'Rafflesia arnoldii',
+      archetype:'tank', description:'A massive flat floor-dwelling monster that looks like a giant red-spotted flower. Too heavy to move fast but devastating up close.',
+      bio: {
+        realName:'Rafflesia arnoldii',
+        habitat:'Rainforests of Sumatra and Borneo.',
+        funFacts:[
+          'Rafflesia produces the largest individual flower on Earth — up to 1 metre wide.',
+          'It has no leaves, stems, or roots — it lives entirely as a parasite inside a host vine.',
+          'The flower smells like rotting flesh to attract carrion flies for pollination.',
+          'It takes up to 9 months for the bud to open, and the flower lasts only a few days.',
+        ],
+        conservationStatus:'Critically Endangered',
+        trivia:'Rafflesia was named after Sir Stamford Raffles, the founder of modern Singapore.',
+      },
+      baseStats:{ hp:80, attack:6, defense:8 },
+      dropTable:[
+        { itemId:'water',              rate:0.75, qty:[1,3] },
+        { itemId:'sunlight',           rate:0.40, qty:[1,2] },
+        { itemId:'seed_rafflesia_king',rate:0.30, qty:[1,1] },
+      ],
+      captureRate:0.45, statScale:{ hp:1.08, attack:1.04, defense:1.07 },
+    },
+
+    // ── 5. Bramble-Cat (Attacker) ─────────────────────────
+    bramble_cat: {
+      id:'bramble_cat', name:'Bramble-Cat', species:'Rubus fruticosus',
+      archetype:'attacker', description:'A feline shape made entirely of twisted thorny vines. Fast, sharp, and relentless.',
+      bio: {
+        realName:'Blackberry / Bramble (Rubus fruticosus)',
+        habitat:'Hedgerows, forests, and disturbed land across Europe and western Asia.',
+        funFacts:[
+          'Bramble canes can grow up to 5 metres long in a single season.',
+          'The thorns are actually modified leaves called prickles, not true thorns.',
+          'Blackberries are technically not berries — they are aggregate fruits.',
+          'Brambles are one of the most invasive plants in the world, colonising cleared land rapidly.',
+        ],
+        conservationStatus:'Least Concern',
+        trivia:'In British folklore, blackberries should not be picked after Michaelmas Day as the devil spits on them.',
+      },
+      baseStats:{ hp:38, attack:15, defense:2 },
+      dropTable:[
+        { itemId:'water',           rate:0.75, qty:[1,2] },
+        { itemId:'sunlight',        rate:0.50, qty:[1,2] },
+        { itemId:'seed_bramble_cat',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.50, statScale:{ hp:1.05, attack:1.08, defense:1.03 },
+    },
+
+    // ── 6. Sun-Beamer (Balanced) ──────────────────────────
+    sun_beamer: {
+      id:'sun_beamer', name:'Sun-Beamer', species:'Helianthus annuus',
+      archetype:'balanced', description:'A lanky tall creature with a glowing solar-disk face that beams blinding light.',
+      bio: {
+        realName:'Sunflower (Helianthus annuus)',
+        habitat:'Native to North America; cultivated worldwide.',
+        funFacts:[
+          'Young sunflowers track the sun from east to west each day — a behaviour called heliotropism.',
+          'A single sunflower head is actually made up of up to 2,000 tiny flowers called florets.',
+          'Sunflower roots can absorb radioactive caesium — they were planted near Chernobyl to clean the soil.',
+          'The world record sunflower measured over 9 metres tall.',
+        ],
+        conservationStatus:'Least Concern',
+        trivia:'The Aztecs worshipped sunflowers as symbols of their sun god and adorned priestesses with sunflower crowns.',
+      },
+      baseStats:{ hp:42, attack:11, defense:3 },
+      dropTable:[
+        { itemId:'water',          rate:0.80, qty:[1,3] },
+        { itemId:'sunlight',       rate:0.65, qty:[1,3] },
+        { itemId:'seed_sun_beamer',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.55, statScale:{ hp:1.06, attack:1.06, defense:1.05 },
+    },
+
+    // ── 7. Baobab Sentinel (Tank) ─────────────────────────
+    baobab_sentinel: {
+      id:'baobab_sentinel', name:'Baobab Sentinel', species:'Adansonia digitata',
+      archetype:'tank', description:'A massive thick-trunked golem of ancient bark and roots. Nearly impossible to knock down.',
+      bio: {
+        realName:'Baobab Tree (Adansonia digitata)',
+        habitat:'African savanna, Madagascar, and northwest Australia.',
+        funFacts:[
+          'Baobabs can live for over 2,000 years — some are among the oldest living things on Earth.',
+          'The trunk can store up to 120,000 litres of water to survive droughts.',
+          'Known as the "Tree of Life" — its fruit, leaves, bark, and seeds are all edible or medicinal.',
+          'The trunk can reach up to 11 metres in diameter.',
+        ],
+        conservationStatus:'Least Concern (some species Endangered)',
+        trivia:'In The Little Prince, baobabs are portrayed as planet-destroying menaces that must be uprooted daily.',
+      },
+      baseStats:{ hp:90, attack:7, defense:10 },
+      dropTable:[
+        { itemId:'water',               rate:0.70, qty:[2,4] },
+        { itemId:'sunlight',            rate:0.40, qty:[1,2] },
+        { itemId:'seed_baobab_sentinel',rate:0.25, qty:[1,1] },
+      ],
+      captureRate:0.40, statScale:{ hp:1.08, attack:1.04, defense:1.08 },
+    },
+
+    // ── 8. Willow-Weeper (Balanced) ───────────────────────
+    willow_weeper: {
+      id:'willow_weeper', name:'Willow-Weeper', species:'Salix babylonica',
+      archetype:'balanced', description:'A slender ghostly figure with long drooping leaves for hair. Eerie and graceful.',
+      bio: {
+        realName:'Weeping Willow (Salix babylonica)',
+        habitat:'River banks and moist areas; originally from China, now worldwide.',
+        funFacts:[
+          'Willow bark contains salicin — the compound that led to the invention of aspirin.',
+          'The roots are so aggressive they can invade and crack underground pipes.',
+          'Willows can be cloned by simply sticking a branch in moist soil.',
+          'They are among the fastest growing trees, adding up to 2.5 metres per year.',
+        ],
+        conservationStatus:'Least Concern',
+        trivia:'In ancient Chinese culture, willow branches were given to departing friends as a symbol of enduring friendship.',
+      },
+      baseStats:{ hp:44, attack:10, defense:3 },
+      dropTable:[
+        { itemId:'water',             rate:0.80, qty:[1,3] },
+        { itemId:'sunlight',          rate:0.50, qty:[1,2] },
+        { itemId:'seed_willow_weeper',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.55, statScale:{ hp:1.06, attack:1.06, defense:1.05 },
+    },
+
+    // ── 9. Cactus Sentry (Attacker) ───────────────────────
+    cactus_sentry: {
+      id:'cactus_sentry', name:'Cactus Sentry', species:'Carnegiea gigantea',
+      archetype:'attacker', description:'A classic three-pronged cactus shape with eyes peering from the ridges. Covered in razor spines.',
+      bio: {
+        realName:'Saguaro Cactus (Carnegiea gigantea)',
+        habitat:'Sonoran Desert of Arizona, USA and Sonora, Mexico.',
+        funFacts:[
+          'A Saguaro does not grow its first arm until it is 75 years old.',
+          'They can live for over 150 years and grow up to 12 metres tall.',
+          'Their thick pleated skin expands like an accordion to store hundreds of litres of water after rain.',
+          'Dozens of species depend on the Saguaro — birds nest in cavities, bats drink the nectar.',
+        ],
+        conservationStatus:'Least Concern',
+        trivia:'It is illegal to harm or remove a Saguaro in Arizona — even on your own property.',
+      },
+      baseStats:{ hp:40, attack:13, defense:3 },
+      dropTable:[
+        { itemId:'water',            rate:0.70, qty:[1,2] },
+        { itemId:'sunlight',         rate:0.55, qty:[1,2] },
+        { itemId:'seed_cactus_sentry',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.50, statScale:{ hp:1.05, attack:1.07, defense:1.04 },
+    },
+
+    // ── 10. Lotus-Monk (Balanced) ─────────────────────────
+    lotus_monk: {
+      id:'lotus_monk', name:'Lotus-Monk', species:'Nelumbo nucifera',
+      archetype:'balanced', description:'A serene floating monster sitting atop a giant lily pad, with flower petals forming a robe. Wise and unpredictable.',
+      bio: {
+        realName:'Sacred Lotus (Nelumbo nucifera)',
+        habitat:'Ponds, lakes, and slow-moving rivers across Asia and Australia.',
+        funFacts:[
+          'Lotus seeds can remain viable for over 1,300 years — the oldest germinated seed was 1,300 years old.',
+          'The lotus is self-thermoregulating, maintaining a temperature of 30–35°C even in cold weather.',
+          'Its leaves are superhydrophobic — water rolls off them perfectly, taking dirt with it (the "Lotus Effect").',
+          'It is the national flower of both India and Vietnam.',
+        ],
+        conservationStatus:'Least Concern',
+        trivia:'In Buddhism, the lotus symbolises purity and enlightenment — rising unsullied from muddy waters.',
+      },
+      baseStats:{ hp:46, attack:9, defense:4 },
+      dropTable:[
+        { itemId:'water',          rate:0.80, qty:[1,3] },
+        { itemId:'sunlight',       rate:0.60, qty:[1,2] },
+        { itemId:'seed_lotus_monk',rate:0.35, qty:[1,1] },
+      ],
+      captureRate:0.55, statScale:{ hp:1.06, attack:1.05, defense:1.05 },
     },
   },
 
   guardianBase: {
-    pitcher_knight: {
-      name: 'Pitcher-Knight', icon: '🏺',
-      baseHp: 60, baseAttack: 8,
-      hpPerLevel: 10, attackPerLevel: 3,
-    },
+    pitcher_knight:  { name:'Pitcher-Knight', icon:'🏺', baseHp:60, baseAttack:8,  hpPerLevel:10, attackPerLevel:3 },
+    snap_drake:      { name:'Snap-Drake',     icon:'🌿', baseHp:45, baseAttack:12, hpPerLevel:7,  attackPerLevel:4 },
+    puffer_fern:     { name:'Puffer-Fern',   icon:'🍄', baseHp:55, baseAttack:9,  hpPerLevel:9,  attackPerLevel:3 },
+    rafflesia_king:  { name:'Rafflesia King',icon:'🌺', baseHp:75, baseAttack:6,  hpPerLevel:12, attackPerLevel:2 },
+    bramble_cat:     { name:'Bramble-Cat',   icon:'🫐', baseHp:48, baseAttack:13, hpPerLevel:7,  attackPerLevel:4 },
+    sun_beamer:      { name:'Sun-Beamer',    icon:'🌻', baseHp:52, baseAttack:10, hpPerLevel:8,  attackPerLevel:3 },
+    baobab_sentinel: { name:'Baobab Sentinel',icon:'🌳',baseHp:85, baseAttack:7,  hpPerLevel:14, attackPerLevel:2 },
+    willow_weeper:   { name:'Willow-Weeper', icon:'🍃', baseHp:54, baseAttack:9,  hpPerLevel:9,  attackPerLevel:3 },
+    cactus_sentry:   { name:'Cactus Sentry', icon:'🌵', baseHp:50, baseAttack:11, hpPerLevel:8,  attackPerLevel:4 },
+    lotus_monk:      { name:'Lotus-Monk',    icon:'🪷', baseHp:56, baseAttack:9,  hpPerLevel:9,  attackPerLevel:3 },
   },
 
   levelUpCost: (level) => Math.ceil(1 + level * 0.8),
@@ -1015,7 +1231,7 @@ const State = (() => {
   };
 })();
 // ============================================================
-//  monsters.js — Monster class + Three.js renderer
+//  monsters.js — Monster class + Three.js 3D renderer
 // ============================================================
 
 class Monster {
@@ -1050,21 +1266,15 @@ class Monster {
 }
 
 // ============================================================
-//  Three.js Renderer
+//  Three.js Renderer — floating 3D monster over camera
 // ============================================================
 const MonsterRenderer = (() => {
 
-  let _scene, _camera, _renderer;
-  let _enemyGroup, _guardianGroup, _shadowE, _shadowG;
+  let _scene, _camera, _renderer, _monster, _shadow;
   let _animFrame, _floatT = 0;
-  let _markerMode = false;
-  let _monsterId  = null;
 
   function spawn(monsterId) {
-    _monsterId = monsterId;
     if (_renderer) dispose();
-
-    // Wait a frame so the canvas has layout dimensions
     requestAnimationFrame(() => _init(monsterId));
   }
 
@@ -1072,9 +1282,8 @@ const MonsterRenderer = (() => {
     const canvas = document.getElementById('monster-canvas');
     if (!canvas) return;
 
-    // Force explicit pixel dimensions
     const W = window.innerWidth;
-    const H = Math.round(window.innerHeight * 0.52);
+    const H = Math.round(window.innerHeight * 0.55);
     canvas.width  = W;
     canvas.height = H;
     canvas.style.width  = W + 'px';
@@ -1082,53 +1291,60 @@ const MonsterRenderer = (() => {
 
     _scene  = new THREE.Scene();
     _floatT = 0;
-    _markerMode = false;
 
     _camera = new THREE.PerspectiveCamera(50, W / H, 0.1, 100);
-    _camera.position.set(0, 1.2, 3.5);
-    _camera.lookAt(0, 0.8, 0);
+    _camera.position.set(0, 1.6, 3.8);
+    _camera.lookAt(0, 0.9, 0);
 
     _renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     _renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     _renderer.setSize(W, H, false);
     _renderer.setClearColor(0x000000, 0);
 
-    // Lights
+    // Lighting
     _scene.add(new THREE.AmbientLight(0x88ccaa, 0.8));
     const sun = new THREE.DirectionalLight(0xffffff, 1.4);
     sun.position.set(3, 8, 5);
     _scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x44ff88, 0.4);
+    const fill = new THREE.DirectionalLight(0x44ff88, 0.35);
     fill.position.set(-4, 2, -2);
     _scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xaaffcc, 0.2);
+    rim.position.set(0, -1, -4);
+    _scene.add(rim);
 
-    // Enemy model
-    _enemyGroup = _buildPKModel(false);
-    _enemyGroup.position.set(0, 0, 0);
-    _scene.add(_enemyGroup);
+    // Monster
+    _monster = _buildPKModel();
+    _monster.position.set(0, 0.4, 0);
+    _scene.add(_monster);
 
-    // Shadow disc — at ground level right under feet
-    _shadowE = _makeShadow();
-    _shadowE.rotation.x = -Math.PI / 2;
-    _shadowE.position.set(0, 0.05, 0);
-    _scene.add(_shadowE);
+    // Shadow — small oval under feet
+    _shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.32, 32),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 })
+    );
+    _shadow.rotation.x = -Math.PI / 2;
+    _shadow.position.set(0, 0.06, 0);
+    _scene.add(_shadow);
 
     _animate();
   }
 
   function _animate() {
     _animFrame = requestAnimationFrame(_animate);
-    _floatT += 0.018;
+    _floatT   += 0.018;
 
-    if (!_markerMode && _enemyGroup) {
-      _enemyGroup.position.y = 0.3 + Math.sin(_floatT) * 0.09;
-      _enemyGroup.rotation.y += 0.007;
-      // Scale shadow based on height for depth effect
-      const scale = 0.8 + (1 - (Math.sin(_floatT) * 0.09 + 0.09) / 0.4) * 0.2;
-      if (_shadowE) _shadowE.scale.set(scale, scale, scale);
-    } else if (_markerMode) {
-      if (_enemyGroup)    _enemyGroup.rotation.y    = -Math.PI/2 + Math.sin(_floatT * 0.8) * 0.08;
-      if (_guardianGroup) _guardianGroup.rotation.y =  Math.PI/2 + Math.sin(_floatT * 0.8 + 1) * 0.08;
+    if (_monster) {
+      // Float up and down
+      _monster.position.y = 0.4 + Math.sin(_floatT) * 0.09;
+      _monster.rotation.y += 0.007;
+
+      // Shadow shrinks as monster rises
+      if (_shadow) {
+        const s = 0.85 + Math.sin(_floatT) * 0.12;
+        _shadow.scale.set(s, s, s);
+        _shadow.material.opacity = 0.25 + (1 - s) * 0.3;
+      }
     }
 
     if (_renderer && _scene && _camera) {
@@ -1136,140 +1352,69 @@ const MonsterRenderer = (() => {
     }
   }
 
-  // ── Marker found: show both models ───────────────────────
-  function onMarkerFound() {
-    if (_markerMode || !_scene) return;
-    _markerMode = true;
-
-    // Switch to top-down view
-    _camera.position.set(0, 5, 1);
-    _camera.lookAt(0, 0, 0);
-
-    // Move enemy to one side
-    _enemyGroup.position.set(0.9, 0, 0);
-    _enemyGroup.rotation.y = -Math.PI / 2;
-    _shadowE.position.set(0.9, 0.05, 0);
-
-    // Spawn guardian on other side
-    _guardianGroup = _buildPKModel(true);
-    _guardianGroup.position.set(-0.9, 0, 0);
-    _guardianGroup.rotation.y = Math.PI / 2;
-    _scene.add(_guardianGroup);
-
-    _shadowG = _makeShadow();
-    _shadowG.rotation.x = -Math.PI / 2;
-    _shadowG.position.set(-0.9, 0.05, 0);
-    _scene.add(_shadowG);
-
-    // Drop animation
-    [_enemyGroup, _guardianGroup].forEach((g, i) => {
-      g.position.y = 2;
-      setTimeout(() => _dropTo(g, 0), i * 200);
-    });
-
-    UI.toast('🎯 Marker found! Both fighters placed!');
-  }
-
-  function onMarkerLost() {
-    if (!_markerMode) return;
-    _markerMode = false;
-
-    _camera.position.set(0, 1.4, 4.2);
-    _camera.lookAt(0, 0.9, 0);
-
-    _enemyGroup.position.set(0, 0, 0);
-    _enemyGroup.rotation.y = 0;
-    _shadowE.position.set(0, 0.05, 0);
-
-    if (_guardianGroup) { _scene.remove(_guardianGroup); _guardianGroup = null; }
-    if (_shadowG)       { _scene.remove(_shadowG);       _shadowG = null; }
-  }
-
-  function _dropTo(group, targetY) {
-    const start = performance.now();
-    const fromY = group.position.y;
-    const tick = (now) => {
-      const t = Math.min((now - start) / 600, 1);
-      const ease = t < 0.7 ? t/0.7 : 1 + Math.sin((t-0.7)/0.3*Math.PI)*0.12*(1-(t-0.7)/0.3);
-      group.position.y = fromY + (targetY - fromY) * ease;
-      if (t < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }
-
-  function playHit(target = 'enemy') {
-    const group = target === 'enemy' ? _enemyGroup : _guardianGroup;
-    if (!group) return;
-    const ox = group.position.x;
+  function playHit() {
+    if (!_monster) return;
+    const ox = _monster.position.x;
     let t = 0;
     const iv = setInterval(() => {
-      group.position.x = ox + (Math.random()-0.5)*0.18;
-      if (++t > 8) { group.position.x = ox; clearInterval(iv); }
+      _monster.position.x = ox + (Math.random() - 0.5) * 0.2;
+      if (++t > 8) { _monster.position.x = ox; clearInterval(iv); }
     }, 40);
-    group.traverse(c => {
+    _monster.traverse(c => {
       if (!c.isMesh || !c.material) return;
       c.material.emissive = new THREE.Color(0xff2200);
       c.material.emissiveIntensity = 0.9;
-      setTimeout(() => { if (c.material) { c.material.emissive.set(0x000000); c.material.emissiveIntensity = 0; } }, 280);
+      setTimeout(() => {
+        if (c.material) {
+          c.material.emissive.set(0x000000);
+          c.material.emissiveIntensity = 0;
+        }
+      }, 280);
     });
   }
 
   function dispose() {
     if (_animFrame) cancelAnimationFrame(_animFrame);
     if (_renderer)  _renderer.dispose();
-    _scene = _camera = _renderer = _enemyGroup = _guardianGroup = _shadowE = _shadowG = null;
-    _markerMode = false; _floatT = 0;
+    _scene = _camera = _renderer = _monster = _shadow = null;
+    _floatT = 0;
   }
 
   function resize() {
     if (!_renderer || !_camera) return;
     const W = window.innerWidth;
-    const H = Math.round(window.innerHeight * 0.52);
+    const H = Math.round(window.innerHeight * 0.55);
     _camera.aspect = W / H;
     _camera.updateProjectionMatrix();
     _renderer.setSize(W, H, false);
   }
 
-  // ── Helpers ───────────────────────────────────────────────
-  function _makeShadow() {
-    return new THREE.Mesh(
-      new THREE.CircleGeometry(0.28, 32),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 })
-    );
-  }
-
   function _mat(hex) { return new THREE.MeshLambertMaterial({ color: hex }); }
 
-  // isGuardian = blue tint
-  function _buildPKModel(isGuardian) {
-    const c1  = isGuardian ? 0x1a4a6e : 0x1a5c35;
-    const c2  = isGuardian ? 0x2e6d8f : 0x2e7d4f;
-    const c3  = isGuardian ? 0x4aaabb : 0x4aab68;
-    const a1  = isGuardian ? 0x607080 : 0x8b7040;
-    const a2  = isGuardian ? 0x303848 : 0x4a3820;
-    const eye = isGuardian ? 0x88ddff : 0xff6b35;
-
+  function _buildPKModel() {
     const g = new THREE.Group();
-    const green  = _mat(c1), gLight = _mat(c2), gBright = _mat(c3);
-    const armor  = _mat(a1), aDark  = _mat(a2);
-    const eyeM   = new THREE.MeshLambertMaterial({ color: eye, emissive: new THREE.Color(eye), emissiveIntensity: 0.6 });
-    const pupilM = new THREE.MeshBasicMaterial({ color: 0x110500 });
-    const acidM  = new THREE.MeshBasicMaterial({ color: c3, transparent: true, opacity: 0.7 });
+    const green   = _mat(0x1a5c35), gLight = _mat(0x2e7d4f), gBright = _mat(0x4aab68);
+    const armor   = _mat(0x8b7040), aDark  = _mat(0x4a3820);
+    const eyeM    = new THREE.MeshLambertMaterial({ color: 0xff6b35, emissive: new THREE.Color(0xff3300), emissiveIntensity: 0.7 });
+    const pupilM  = new THREE.MeshBasicMaterial({ color: 0x110500 });
+    const acidM   = new THREE.MeshBasicMaterial({ color: 0x4aab68, transparent: true, opacity: 0.7 });
 
     const add = (geo, mat, px=0,py=0,pz=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1) => {
       const m = new THREE.Mesh(geo, mat);
       m.position.set(px,py,pz); m.rotation.set(rx,ry,rz); m.scale.set(sx,sy,sz);
-      g.add(m); return m;
+      g.add(m);
     };
 
-    // Feet & legs
-    add(new THREE.SphereGeometry(0.13,10,8),      aDark, -0.22,0.04,0.07);
-    add(new THREE.SphereGeometry(0.13,10,8),      aDark,  0.22,0.04,0.07);
+    // Feet
+    add(new THREE.SphereGeometry(0.13,10,8), aDark, -0.22,0.04,0.07);
+    add(new THREE.SphereGeometry(0.13,10,8), aDark,  0.22,0.04,0.07);
+    // Legs
     add(new THREE.CylinderGeometry(0.10,0.13,0.42,10), armor, -0.22,0.26,0);
     add(new THREE.CylinderGeometry(0.10,0.13,0.42,10), armor,  0.22,0.26,0);
     // Body
     add(new THREE.CylinderGeometry(0.25,0.30,0.62,14), green, 0,0.72,0);
     [0.47,0.63,0.79].forEach(y => add(new THREE.TorusGeometry(0.27,0.026,8,22), gLight, 0,y,0));
+    // Mouth
     add(new THREE.TorusGeometry(0.26,0.042,10,22), gLight, 0,1.03,0);
     add(new THREE.CircleGeometry(0.20,18), acidM, 0,1.05,0, -Math.PI/2,0,0);
     // Pauldrons
@@ -1292,28 +1437,411 @@ const MonsterRenderer = (() => {
       const a=(i/10)*Math.PI*2;
       add(new THREE.ConeGeometry(0.034,0.12,5), aDark, Math.cos(a)*0.33,1.07,Math.sin(a)*0.33, 0,0,Math.PI);
     }
-    for (let i=0;i<5;i++) {
-      const a=(i/5)*Math.PI*2;
-      add(new THREE.BoxGeometry(0.018,0.26,0.018), aDark, Math.cos(a)*0.16,1.30,Math.sin(a)*0.16, Math.sin(a)*0.3,0,-Math.cos(a)*0.3);
-    }
     // Eyes
     [-0.11,0.11].forEach(x => {
       add(new THREE.SphereGeometry(0.072,10,8), eyeM,   x,1.07,0.24);
       add(new THREE.SphereGeometry(0.036,8,6),  pupilM, x,1.07,0.30);
-      add(new THREE.SphereGeometry(0.016,6,6),  new THREE.MeshBasicMaterial({color:0xffaa77}), x+0.02,1.09,0.32);
+      add(new THREE.SphereGeometry(0.016,6,6),
+          new THREE.MeshBasicMaterial({color:0xffaa77}), x+0.02,1.09,0.32);
     });
     // Vines
     [[-0.44,1.10,0.10,0,0,0.75],[0.44,1.10,0.10,0,0,-0.75],
      [-0.38,0.50,0.20,0.3,0,0.65],[0.38,0.50,0.20,0.3,0,-0.65]].forEach(
       ([px,py,pz,rx,ry,rz]) => add(new THREE.CylinderGeometry(0.018,0.010,0.28,6), gBright, px,py,pz,rx,ry,rz)
     );
-    [-0.22,0.22].forEach(x => add(new THREE.SphereGeometry(0.06,6,6), gBright, x,1.44,0, 0,0,0, 1.4,0.5,0.8));
+    [-0.22,0.22].forEach(x =>
+      add(new THREE.SphereGeometry(0.06,6,6), gBright, x,1.44,0, 0,0,0, 1.4,0.5,0.8)
+    );
 
     g.scale.set(0.78,0.78,0.78);
     return g;
   }
 
-  return { spawn, onMarkerFound, onMarkerLost, playHit, dispose, resize };
+  return { spawn, dispose, playHit, resize };
+})();
+
+// ── Extra model builders ──────────────────────────────────────
+
+// Append to MonsterRenderer — patch in extra models
+(function() {
+  const _origSpawn = MonsterRenderer.spawn.bind(MonsterRenderer);
+
+  // Override spawn to call correct builder
+  MonsterRenderer.spawn = function(monsterId) {
+    MonsterRenderer._currentMonster = monsterId;
+    if (MonsterRenderer._renderer) MonsterRenderer.dispose();
+    requestAnimationFrame(() => MonsterRenderer._initModel(monsterId));
+  };
+
+  MonsterRenderer._initModel = function(monsterId) {
+    const canvas = document.getElementById('monster-canvas');
+    if (!canvas) return;
+
+    const W = window.innerWidth;
+    const H = Math.round(window.innerHeight * 0.55);
+    canvas.width = W; canvas.height = H;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+
+    const THREE = window.THREE;
+    MonsterRenderer._scene  = new THREE.Scene();
+    MonsterRenderer._floatT = 0;
+
+    MonsterRenderer._camera = new THREE.PerspectiveCamera(50, W/H, 0.1, 100);
+    MonsterRenderer._camera.position.set(0, 1.6, 3.8);
+    MonsterRenderer._camera.lookAt(0, 0.9, 0);
+
+    MonsterRenderer._renderer = new THREE.WebGLRenderer({ canvas, alpha:true, antialias:true });
+    MonsterRenderer._renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    MonsterRenderer._renderer.setSize(W, H, false);
+    MonsterRenderer._renderer.setClearColor(0x000000, 0);
+
+    MonsterRenderer._scene.add(new THREE.AmbientLight(0x88ccaa, 0.8));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(3,8,5);
+    MonsterRenderer._scene.add(sun);
+    const fill = new THREE.DirectionalLight(0x44ff88, 0.35); fill.position.set(-4,2,-2);
+    MonsterRenderer._scene.add(fill);
+
+    const model = MonsterRenderer._buildByID(monsterId);
+    model.position.set(0, 0.4, 0);
+    MonsterRenderer._monster = model;
+    MonsterRenderer._scene.add(model);
+
+    // Shadow
+    MonsterRenderer._shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(0.32, 32),
+      new THREE.MeshBasicMaterial({ color:0x000000, transparent:true, opacity:0.4 })
+    );
+    MonsterRenderer._shadow.rotation.x = -Math.PI/2;
+    MonsterRenderer._shadow.position.set(0, 0.06, 0);
+    MonsterRenderer._scene.add(MonsterRenderer._shadow);
+
+    MonsterRenderer._animate();
+  };
+
+  MonsterRenderer._buildByID = function(id) {
+    const m = {
+      pitcher_knight:  () => MonsterRenderer._buildPKModel(),
+      snap_drake:      () => MonsterRenderer._buildSnapDrake(),
+      puffer_fern:     () => MonsterRenderer._buildPufferFern(),
+      rafflesia_king:  () => MonsterRenderer._buildRafflesiaKing(),
+      bramble_cat:     () => MonsterRenderer._buildBrambleCat(),
+      sun_beamer:      () => MonsterRenderer._buildSunBeamer(),
+      baobab_sentinel: () => MonsterRenderer._buildBaobabSentinel(),
+      willow_weeper:   () => MonsterRenderer._buildWillowWeeper(),
+      cactus_sentry:   () => MonsterRenderer._buildCactusSentry(),
+      lotus_monk:      () => MonsterRenderer._buildLotusMonk(),
+    };
+    return (m[id] || m.pitcher_knight)();
+  };
+
+  const mat = (hex, emit) => {
+    const m = new THREE.MeshLambertMaterial({ color: hex });
+    if (emit) { m.emissive = new THREE.Color(emit); m.emissiveIntensity = 0.5; }
+    return m;
+  };
+  const add = (g, geo, m, px=0,py=0,pz=0,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1) => {
+    const mesh = new THREE.Mesh(geo, m);
+    mesh.position.set(px,py,pz); mesh.rotation.set(rx,ry,rz); mesh.scale.set(sx,sy,sz);
+    g.add(mesh);
+  };
+
+  // ── Snap-Drake (raptor + flytrap head) ───────────────────
+  MonsterRenderer._buildSnapDrake = function() {
+    const g = new THREE.Group();
+    const green  = mat(0x2d7a3a), dGreen = mat(0x1a4a22), lime = mat(0x6aee6a);
+    const red    = mat(0xff2222, 0xff0000), teeth = mat(0xffffff);
+    // Body
+    add(g, new THREE.SphereGeometry(0.28,10,8), green, 0,0.55,0, 0,0,0, 1.2,1,0.9);
+    // Tail
+    add(g, new THREE.CylinderGeometry(0.05,0.15,0.6,8), dGreen, -0.45,0.45,0, 0,0,Math.PI/3);
+    // Legs
+    [-0.18,0.18].forEach(x => {
+      add(g, new THREE.CylinderGeometry(0.07,0.09,0.4,8), dGreen, x,0.22,0);
+      add(g, new THREE.SphereGeometry(0.09,8,6), dGreen, x,0.04,0.08);
+    });
+    // Neck
+    add(g, new THREE.CylinderGeometry(0.12,0.16,0.3,8), green, 0.15,0.82,0, 0,0,-0.3);
+    // Flytrap head — two halves
+    add(g, new THREE.SphereGeometry(0.22,10,8), dGreen, 0.36,0.95,0, 0,0,0, 1,0.5,1.1);
+    add(g, new THREE.SphereGeometry(0.22,10,8), dGreen, 0.36,1.08,0, 0,0,0, 1,0.5,1.1);
+    // Red interior
+    add(g, new THREE.SphereGeometry(0.18,10,8), red, 0.36,1.01,0, 0,0,0, 1,0.3,1);
+    // Teeth
+    for(let i=0;i<6;i++){
+      const a = (i/6)*Math.PI*2;
+      add(g, new THREE.ConeGeometry(0.03,0.1,4), teeth, 0.36+Math.cos(a)*0.18,1.01,Math.sin(a)*0.18, 0,0,0);
+    }
+    // Arms
+    add(g, new THREE.CylinderGeometry(0.05,0.07,0.35,6), green, -0.05,0.65,0.2, 0.5,0,-0.5);
+    add(g, new THREE.CylinderGeometry(0.05,0.07,0.35,6), green, -0.05,0.65,-0.2, -0.5,0,0.5);
+    // Eyes on neck
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0xffff00,0xaaaa00), 0.28,1.0,0.16);
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0xffff00,0xaaaa00), 0.28,1.0,-0.16);
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // ── Puffer-Fern (round fluffy ball) ──────────────────────
+  MonsterRenderer._buildPufferFern = function() {
+    const g = new THREE.Group();
+    const white = mat(0xeeeedd), stem = mat(0x8fbc5a), face = mat(0x555533);
+    // Main sphere body
+    add(g, new THREE.SphereGeometry(0.45,14,12), white, 0,0.65,0);
+    // Spore dots
+    for(let i=0;i<12;i++){
+      const phi=Math.acos(1-2*(i+0.5)/12), th=Math.PI*(1+Math.sqrt(5))*i;
+      add(g, new THREE.SphereGeometry(0.07,6,6), mat(0xccccaa),
+        0.42*Math.sin(phi)*Math.cos(th), 0.65+0.42*Math.cos(phi), 0.42*Math.sin(phi)*Math.sin(th));
+    }
+    // Tiny legs
+    [-0.15,0.15].forEach(x => add(g, new THREE.CylinderGeometry(0.06,0.08,0.22,6), stem, x,0.18,0));
+    // Eyes
+    add(g, new THREE.SphereGeometry(0.06,8,6), face, -0.12,0.75,0.38);
+    add(g, new THREE.SphereGeometry(0.06,8,6), face,  0.12,0.75,0.38);
+    // Pupils
+    add(g, new THREE.SphereGeometry(0.03,6,6), mat(0x111111), -0.12,0.75,0.43);
+    add(g, new THREE.SphereGeometry(0.03,6,6), mat(0x111111),  0.12,0.75,0.43);
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // ── Rafflesia King (giant flat flower) ───────────────────
+  MonsterRenderer._buildRafflesiaKing = function() {
+    const g = new THREE.Group();
+    const red=mat(0xcc2200), dRed=mat(0x881100), spots=mat(0xff8800), cream=mat(0xffddaa);
+    // 5 large petals
+    for(let i=0;i<5;i++){
+      const a=(i/5)*Math.PI*2;
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.36,10,8), red);
+      p.position.set(Math.cos(a)*0.45, 0.25, Math.sin(a)*0.45);
+      p.scale.set(1,0.3,0.9);
+      g.add(p);
+      // Orange spots on each petal
+      for(let j=0;j<4;j++){
+        const r2=0.15+Math.random()*0.15;
+        add(g, new THREE.SphereGeometry(0.05,6,6), spots,
+          Math.cos(a)*r2*1.2, 0.35, Math.sin(a)*r2*1.2);
+      }
+    }
+    // Central disc
+    add(g, new THREE.CylinderGeometry(0.22,0.25,0.18,14), dRed, 0,0.22,0);
+    add(g, new THREE.CylinderGeometry(0.16,0.18,0.08,14), cream, 0,0.32,0);
+    // Eyes inside disc
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0xffff00,0xaaaa00), -0.07,0.38,0.12);
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0xffff00,0xaaaa00),  0.07,0.38,0.12);
+    // Tiny stub legs
+    [-0.18,0.18].forEach(x=>add(g,new THREE.CylinderGeometry(0.06,0.08,0.18,6),dRed,x,0.06,0));
+    g.scale.set(0.85,0.85,0.85);
+    return g;
+  };
+
+  // ── Bramble-Cat (feline vine shape) ──────────────────────
+  MonsterRenderer._buildBrambleCat = function() {
+    const g = new THREE.Group();
+    const vine=mat(0x3a5c1a), thorn=mat(0x8b6a00), berry=mat(0x220044);
+    // Body — elongated cat torso
+    add(g, new THREE.SphereGeometry(0.28,10,8), vine, 0,0.55,0, 0,0,0, 1.3,0.9,0.8);
+    // Head
+    add(g, new THREE.SphereGeometry(0.22,10,8), vine, 0.3,0.82,0);
+    // Ears
+    add(g, new THREE.ConeGeometry(0.07,0.16,5), vine, 0.22,1.00, 0.12, 0,0,-0.3);
+    add(g, new THREE.ConeGeometry(0.07,0.16,5), vine, 0.22,1.00,-0.12, 0,0,-0.3);
+    // Eyes
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0x88ff22,0x44aa00), 0.48,0.86, 0.10);
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0x88ff22,0x44aa00), 0.48,0.86,-0.10);
+    // Legs
+    [-0.16,0.16].forEach((x,i)=>{
+      add(g, new THREE.CylinderGeometry(0.06,0.08,0.42,6), vine, x,0.24,i===0?0.1:-0.1);
+      add(g, new THREE.SphereGeometry(0.07,6,6), vine, x,0.04,i===0?0.14:-0.14);
+    });
+    // Tail
+    add(g, new THREE.CylinderGeometry(0.03,0.07,0.55,6), vine, -0.4,0.52,0, 0,0,Math.PI/4);
+    // Thorns on body
+    for(let i=0;i<8;i++){
+      const a=i/8*Math.PI*2;
+      add(g, new THREE.ConeGeometry(0.025,0.12,4), thorn, Math.cos(a)*0.28,0.55+Math.sin(a)*0.12,Math.sin(a)*0.22, a,0,0);
+    }
+    // Berries
+    for(let i=0;i<5;i++){
+      add(g, new THREE.SphereGeometry(0.04,6,6), berry,
+        (Math.random()-0.5)*0.4, 0.45+Math.random()*0.3, (Math.random()-0.5)*0.3);
+    }
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // ── Sun-Beamer (lanky sunflower creature) ────────────────
+  MonsterRenderer._buildSunBeamer = function() {
+    const g = new THREE.Group();
+    const yellow=mat(0xffcc00,0xaa8800), dYellow=mat(0xcc8800), brown=mat(0x4a2800), green=mat(0x2a6a1a);
+    // Long thin body/stem
+    add(g, new THREE.CylinderGeometry(0.08,0.12,1.0,8), green, 0,0.55,0);
+    // Leaves on stem
+    add(g, new THREE.SphereGeometry(0.16,8,6), green, 0.18,0.5,0, 0,0,0.6, 1,0.4,0.7);
+    add(g, new THREE.SphereGeometry(0.16,8,6), green,-0.18,0.7,0, 0,0,-0.6, 1,0.4,0.7);
+    // Sunflower disc face
+    add(g, new THREE.CylinderGeometry(0.28,0.28,0.1,14), brown, 0,1.12,0);
+    // Petals around face
+    for(let i=0;i<12;i++){
+      const a=i/12*Math.PI*2;
+      add(g, new THREE.SphereGeometry(0.1,8,6), yellow, Math.cos(a)*0.36,1.12,Math.sin(a)*0.36, 0,0,0, 0.7,0.5,1);
+    }
+    // Eyes on disc
+    add(g, new THREE.SphereGeometry(0.06,8,6), mat(0xffffff), -0.08,1.16,0.24);
+    add(g, new THREE.SphereGeometry(0.06,8,6), mat(0xffffff),  0.08,1.16,0.24);
+    add(g, new THREE.SphereGeometry(0.03,6,6), mat(0x111111), -0.08,1.16,0.29);
+    add(g, new THREE.SphereGeometry(0.03,6,6), mat(0x111111),  0.08,1.16,0.29);
+    // Glow
+    add(g, new THREE.SphereGeometry(0.30,12,10), mat(0xffff88,0xffcc00), 0,1.12,0, 0,0,0, 1,0.3,1);
+    // Thin arms
+    add(g, new THREE.CylinderGeometry(0.04,0.06,0.4,6), green, -0.2,0.75,0, 0,0,0.7);
+    add(g, new THREE.CylinderGeometry(0.04,0.06,0.4,6), green,  0.2,0.75,0, 0,0,-0.7);
+    // Feet
+    [-0.1,0.1].forEach(x=>add(g,new THREE.SphereGeometry(0.08,8,6),green,x,0.06,0.06));
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // ── Baobab Sentinel (massive trunk golem) ────────────────
+  MonsterRenderer._buildBaobabSentinel = function() {
+    const g = new THREE.Group();
+    const bark=mat(0x8b6a40), dBark=mat(0x5c4020), leaf=mat(0x2a6a1a);
+    // Massive trunk body
+    add(g, new THREE.CylinderGeometry(0.36,0.44,0.9,12), bark, 0,0.55,0);
+    // Bark texture bumps
+    for(let i=0;i<8;i++){
+      const a=i/8*Math.PI*2;
+      add(g, new THREE.SphereGeometry(0.1,6,6), dBark, Math.cos(a)*0.36,0.4+Math.random()*0.4,Math.sin(a)*0.36);
+    }
+    // Small stubby legs
+    [-0.22,0.22].forEach(x=>{
+      add(g, new THREE.CylinderGeometry(0.1,0.13,0.22,8), bark, x,0.1,0);
+      add(g, new THREE.SphereGeometry(0.12,8,6), dBark, x,0.01,0.08);
+    });
+    // Short thick arms
+    [-0.5,0.5].forEach((x,i)=>{
+      add(g, new THREE.CylinderGeometry(0.1,0.14,0.38,8), bark, x,0.72,0, 0,0,i===0?0.6:-0.6);
+      // Root-fists
+      add(g, new THREE.SphereGeometry(0.16,8,6), dBark, x<0?-0.7:0.7,0.56,0);
+    });
+    // Canopy top — cluster of leaves/branches
+    for(let i=0;i<7;i++){
+      const a=i/7*Math.PI*2, r=0.2+Math.random()*0.22;
+      add(g, new THREE.SphereGeometry(0.18,8,6), leaf, Math.cos(a)*r,1.18+Math.random()*0.2,Math.sin(a)*r);
+    }
+    add(g, new THREE.SphereGeometry(0.22,8,6), leaf, 0,1.28,0);
+    // Eyes
+    add(g, new THREE.SphereGeometry(0.07,8,6), mat(0xff8800,0xcc4400), -0.12,0.78,0.32);
+    add(g, new THREE.SphereGeometry(0.07,8,6), mat(0xff8800,0xcc4400),  0.12,0.78,0.32);
+    add(g, new THREE.SphereGeometry(0.035,6,6), mat(0x111111), -0.12,0.78,0.38);
+    add(g, new THREE.SphereGeometry(0.035,6,6), mat(0x111111),  0.12,0.78,0.38);
+    g.scale.set(0.72,0.72,0.72);
+    return g;
+  };
+
+  // ── Willow-Weeper (slender ghostly figure) ───────────────
+  MonsterRenderer._buildWillowWeeper = function() {
+    const g = new THREE.Group();
+    const pale=mat(0xc8e8d0), dpale=mat(0x7aaa88), wisp=mat(0xaaddbb,0x44aa66);
+    // Slender body
+    add(g, new THREE.CylinderGeometry(0.1,0.18,0.8,10), pale, 0,0.55,0);
+    // Head
+    add(g, new THREE.SphereGeometry(0.2,10,8), pale, 0,1.04,0, 0,0,0, 1,1.1,1);
+    // Long drooping hair/leaves (willow strands)
+    for(let i=0;i<10;i++){
+      const a=i/10*Math.PI*2, r=0.15+Math.random()*0.08;
+      const len=0.4+Math.random()*0.35;
+      add(g, new THREE.CylinderGeometry(0.012,0.006,len,4), dpale,
+        Math.cos(a)*r, 1.04-len/2, Math.sin(a)*r, 0.3*Math.cos(a),0,0.3*Math.sin(a));
+    }
+    // Glowing wispy eyes
+    add(g, new THREE.SphereGeometry(0.055,8,6), wisp, -0.08,1.08,0.16);
+    add(g, new THREE.SphereGeometry(0.055,8,6), wisp,  0.08,1.08,0.16);
+    // Slender arms
+    add(g, new THREE.CylinderGeometry(0.03,0.06,0.45,6), pale, -0.2,0.68,0, 0,0,0.5);
+    add(g, new THREE.CylinderGeometry(0.03,0.06,0.45,6), pale,  0.2,0.68,0, 0,0,-0.5);
+    // Wispy trailing bottom instead of feet
+    for(let i=0;i<5;i++){
+      const a=i/5*Math.PI*2;
+      add(g, new THREE.CylinderGeometry(0.02,0.01,0.3,4), dpale, Math.cos(a)*0.12,0.06,Math.sin(a)*0.12, 0.4*Math.cos(a),0,0.4*Math.sin(a));
+    }
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // ── Cactus Sentry (3-arm saguaro) ────────────────────────
+  MonsterRenderer._buildCactusSentry = function() {
+    const g = new THREE.Group();
+    const cactus=mat(0x2a7a3a), dCactus=mat(0x1a5a28), spine=mat(0xddcc88);
+    // Main trunk
+    add(g, new THREE.CylinderGeometry(0.18,0.22,1.0,12), cactus, 0,0.55,0);
+    // Left arm
+    add(g, new THREE.CylinderGeometry(0.10,0.13,0.4,10), cactus, -0.34,0.75,0, 0,0,Math.PI/2);
+    add(g, new THREE.CylinderGeometry(0.10,0.10,0.35,10), cactus, -0.55,0.92,0, 0,0,-0.1);
+    // Right arm
+    add(g, new THREE.CylinderGeometry(0.10,0.13,0.4,10), cactus,  0.34,0.65,0, 0,0,-Math.PI/2);
+    add(g, new THREE.CylinderGeometry(0.10,0.10,0.35,10), cactus,  0.55,0.82,0, 0,0,0.1);
+    // Ridges/ribs
+    for(let i=0;i<6;i++){
+      const a=i/6*Math.PI*2;
+      add(g, new THREE.BoxGeometry(0.02,0.9,0.02), dCactus, Math.cos(a)*0.18,0.55,Math.sin(a)*0.18);
+    }
+    // Spines
+    for(let y=0.2;y<1.0;y+=0.2){
+      for(let i=0;i<6;i++){
+        const a=i/6*Math.PI*2;
+        add(g, new THREE.CylinderGeometry(0.006,0.003,0.12,3), spine,
+          Math.cos(a)*0.2,y,Math.sin(a)*0.2, 0,a,Math.PI/2);
+      }
+    }
+    // Eyes peeking from ridges
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0xff9900,0xff5500), -0.04,0.82,0.18);
+    add(g, new THREE.SphereGeometry(0.05,8,6), mat(0xff9900,0xff5500),  0.08,0.82,0.16);
+    // Base feet bumps
+    [-0.16,0.16].forEach(x=>add(g,new THREE.SphereGeometry(0.1,8,6),dCactus,x,0.06,0));
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // ── Lotus-Monk (serene floating on lily pad) ─────────────
+  MonsterRenderer._buildLotusMonk = function() {
+    const g = new THREE.Group();
+    const pink=mat(0xff88aa,0xaa4466), dPink=mat(0xcc5577), pad=mat(0x2a6a1a), robeM=mat(0xffaacc);
+    const cream=mat(0xffeedd), gold=mat(0xffcc44,0xaa8800);
+    // Lily pad base
+    add(g, new THREE.CylinderGeometry(0.48,0.48,0.05,16), pad, 0,0.06,0);
+    add(g, new THREE.SphereGeometry(0.48,14,4,0,Math.PI*2,0,Math.PI*0.12), pad, 0,0.06,0);
+    // Sitting body/robe
+    add(g, new THREE.SphereGeometry(0.26,10,8), robeM, 0,0.42,0, 0,0,0, 1,1.1,0.9);
+    // Head
+    add(g, new THREE.SphereGeometry(0.18,10,8), cream, 0,0.78,0);
+    // Petal robe around body
+    for(let i=0;i<6;i++){
+      const a=i/6*Math.PI*2;
+      add(g, new THREE.SphereGeometry(0.14,8,6), pink, Math.cos(a)*0.28,0.4,Math.sin(a)*0.28, 0,0,0, 0.7,1.2,0.5);
+    }
+    // Lotus flower on head
+    add(g, new THREE.SphereGeometry(0.1,8,6), dPink, 0,0.98,0);
+    for(let i=0;i<5;i++){
+      const a=i/5*Math.PI*2;
+      add(g, new THREE.SphereGeometry(0.07,6,6), pink, Math.cos(a)*0.14,0.96,Math.sin(a)*0.14, 0,0,0, 0.6,1.1,0.5);
+    }
+    // Serene closed eyes
+    add(g, new THREE.SphereGeometry(0.04,8,6), mat(0x886655), -0.07,0.80,0.14, 0,0,0, 1,0.4,1);
+    add(g, new THREE.SphereGeometry(0.04,8,6), mat(0x886655),  0.07,0.80,0.14, 0,0,0, 1,0.4,1);
+    // Folded hands
+    add(g, new THREE.SphereGeometry(0.07,8,6), cream, 0,0.38,0.22);
+    // Gold halo
+    add(g, new THREE.TorusGeometry(0.22,0.02,6,24), gold, 0,1.04,0);
+    g.scale.set(0.78,0.78,0.78);
+    return g;
+  };
+
+  // Re-expose _buildPKModel reference
+  MonsterRenderer._buildPKModel = MonsterRenderer._buildPKModel || function() {
+    return new THREE.Group();
+  };
+
 })();
 // ============================================================
 //  guardian.js — Player Guardian (hatched from seed)
@@ -2013,46 +2541,10 @@ const Game = (() => {
   }
 
   function startGame() {
-    // Check if returning from AR battle
-    const params = new URLSearchParams(location.search);
-    if (params.get('result')) {
-      _handleBattleReturn(params.get('result'));
-      // Clean URL
-      history.replaceState({}, '', location.pathname);
-    }
-
     if (!State.get().tutorialDone) {
       UI.showScreen('screen-tutorial');
     } else {
       UI.showScreen('screen-hub');
-    }
-  }
-
-  function _handleBattleReturn(outcome) {
-    const data = JSON.parse(sessionStorage.getItem('battleResult') || '{}');
-    sessionStorage.removeItem('battleResult');
-
-    if (!data.drops) return;
-
-    // Apply drops
-    for (const d of data.drops) {
-      State.addItem(d.itemId, d.qty);
-      if (DATA.items[d.itemId]?.type === 'seed') State.addSeed(d.itemId);
-    }
-
-    // Update guardian HP
-    const g = State.getActiveGuardian();
-    if (g && data.guardianHp !== undefined) {
-      g.currentHp = Math.max(0, data.guardianHp);
-      if (outcome === 'victory' || outcome === 'capture') g.healFull();
-    }
-
-    // Increment encounter
-    if (outcome !== 'exit') State.get().encounterCount++;
-
-    // Show result screen
-    if (outcome !== 'exit') {
-      setTimeout(() => UI.showResult(outcome, data.drops, { name: 'Pitcher-Knight', monsterId: 'pitcher_knight' }), 100);
     }
   }
 
@@ -2069,17 +2561,11 @@ const Game = (() => {
       UI.toast('🌱 Hatch your seed first! Use your 3 💧 Water.');
       return;
     }
-
-    // Save guardian data for AR page
-    const g = State.getActiveGuardian();
-    sessionStorage.setItem('activeGuardian', JSON.stringify({
-      name: g.name, icon: g.icon, level: g.level,
-      currentHp: g.currentHp, maxHp: g.maxHp,
-      attack: g.attack, defense: g.defense,
-    }));
-
-    // Navigate to AR battle page
-    location.href = `eco-guardian-ar.html?level=${_enemyLevel()}`;
+    _startCamera().then(() => {
+      UI.showScreen('screen-battle');
+      UI.setBattleUI(true);
+      setTimeout(_newEncounter, 150);
+    });
   }
 
   function exitBattle() {
@@ -2090,24 +2576,39 @@ const Game = (() => {
   }
 
   function nextEncounter() {
-    // Go to AR page again for next encounter
-    enterBattle();
+    State.get().encounterCount++;
+    MonsterRenderer.dispose();
+    UI.showScreen('screen-battle');
+    UI.setBattleUI(true);
+    setTimeout(_newEncounter, 150);
+  }
+
+  function _newEncounter() {
+    const pool = ['pitcher_knight','snap_drake','puffer_fern','rafflesia_king','bramble_cat','sun_beamer','baobab_sentinel','willow_weeper','cactus_sentry','lotus_monk'];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    Battle.start(pick, _enemyLevel());
   }
 
   async function _startCamera() {
     _stopCamera();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } }, audio: false,
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
       });
       _cameraStream = stream;
       const vid = document.getElementById('ar-camera');
       if (vid) { vid.srcObject = stream; vid.style.display = 'block'; await vid.play(); }
-    } catch (e) { console.warn('Camera:', e.message); }
+    } catch (e) {
+      console.warn('Camera unavailable:', e.message);
+    }
   }
 
   function _stopCamera() {
-    if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
+    if (_cameraStream) {
+      _cameraStream.getTracks().forEach(t => t.stop());
+      _cameraStream = null;
+    }
     const vid = document.getElementById('ar-camera');
     if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
   }
@@ -2120,6 +2621,7 @@ const Game = (() => {
       document.querySelector(`#detail-tabs [data-tab="${tab}"]`)?.classList.add('active');
       document.getElementById(`detail-tab-${tab}`)?.classList.add('active');
     };
+    window.addEventListener('resize', () => MonsterRenderer.resize());
   </script>
 </body>
 </html>
