@@ -754,6 +754,8 @@ html, body {
       <span id="hub-guardian-count">0</span> Guardians &nbsp;·&nbsp;
       <span id="hub-water-count">0</span> 💧 &nbsp;·&nbsp;
       <span id="hub-sunlight-count">0</span> ☀️
+      &nbsp;·&nbsp;
+      <button onclick="UI.confirmReset()" style="background:none;border:none;color:#c05050;font-size:0.65rem;cursor:pointer;opacity:0.7;padding:0;">↺ Reset</button>
     </div>
   </div>
 
@@ -761,9 +763,7 @@ html, body {
     <video id="ar-camera" autoplay playsinline muted></video>
     <div id="ar-bg-overlay"></div>
     <div id="enemy-stage">
-      <div id="enemy-model-wrap">
-        <canvas id="monster-canvas"></canvas>
-      </div>
+      <div id="enemy-model-wrap"><canvas id="monster-canvas"></canvas></div>
       <div id="enemy-name-tag"></div>
     </div>
     <div id="effects-layer"></div>
@@ -1153,41 +1153,80 @@ const DATA = {
   },
 };
 // ============================================================
-//  state.js — Centralised mutable game state
+//  state.js — Centralised mutable game state + auto-save
 // ============================================================
 
 const State = (() => {
 
-  const _state = {
-    // Start with a seed and enough water to hatch it — tutorial setup
-    inventory: {
-      water:               3,   // exactly enough to hatch
-      seed_pitcher_knight: 1,   // one starter seed
-    },
+  const SAVE_KEY = 'eco_guardian_save';
 
+  const _default = {
+    inventory: {
+      water:               3,
+      seed_pitcher_knight: 1,
+    },
     seeds: [
       { seedItemId: 'seed_pitcher_knight', monsterId: 'pitcher_knight' }
     ],
-
     guardians: [],
     activeGuardianIndex: null,
     battle: null,
     encounterCount: 0,
-
-    // Tutorial state
     tutorialDone: false,
   };
+
+  // ── Load from localStorage or start fresh ────────────────
+  function _load() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return JSON.parse(JSON.stringify(_default));
+      const saved = JSON.parse(raw);
+      // Restore Guardian class instances from plain objects
+      if (saved.guardians) {
+        saved.guardians = saved.guardians.map(g => {
+          const guardian = Object.assign(Object.create(Guardian.prototype), g);
+          return guardian;
+        });
+      }
+      return saved;
+    } catch (e) {
+      console.warn('Save load failed, starting fresh:', e);
+      return JSON.parse(JSON.stringify(_default));
+    }
+  }
+
+  let _state = _load();
+
+  // ── Auto-save after every mutation ───────────────────────
+  function _save() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(_state));
+    } catch (e) {
+      console.warn('Save failed:', e);
+    }
+  }
 
   return {
     get: () => _state,
 
+    hasSave() {
+      return !!localStorage.getItem(SAVE_KEY);
+    },
+
+    resetSave() {
+      localStorage.removeItem(SAVE_KEY);
+      _state = JSON.parse(JSON.stringify(_default));
+    },
+
     addItem(itemId, qty = 1) {
       _state.inventory[itemId] = (_state.inventory[itemId] || 0) + qty;
+      _save();
     },
 
     removeItem(itemId, qty = 1) {
       if (!this.hasItem(itemId, qty)) return false;
       _state.inventory[itemId] -= qty;
+      _save();
       return true;
     },
 
@@ -1203,15 +1242,18 @@ const State = (() => {
       const itemDef = DATA.items[seedItemId];
       if (!itemDef) return;
       _state.seeds.push({ seedItemId, monsterId: itemDef.monsterId });
+      _save();
     },
 
     removeSeed(index) {
       _state.seeds.splice(index, 1);
+      _save();
     },
 
     addGuardian(guardian) {
       _state.guardians.push(guardian);
       if (_state.activeGuardianIndex === null) _state.activeGuardianIndex = 0;
+      _save();
     },
 
     getActiveGuardian() {
@@ -1222,11 +1264,17 @@ const State = (() => {
     setActiveGuardian(index) {
       if (index >= 0 && index < _state.guardians.length) {
         _state.activeGuardianIndex = index;
+        _save();
       }
     },
 
     completeTutorial() {
       _state.tutorialDone = true;
+      _save();
+    },
+
+    saveNow() {
+      _save();
     },
   };
 })();
@@ -1278,8 +1326,8 @@ const MonsterRenderer = (() => {
   let _animFrame, _floatT = 0;
 
   // ── helpers ───────────────────────────────────────────────
-  const M = (hex, emitHex) => {
-    const m = new THREE.MeshLambertMaterial({ color: hex });
+  const M = (hex, emitHex, shine=30) => {
+    const m = new THREE.MeshPhongMaterial({ color: hex, shininess: shine, specular: new THREE.Color(0x333333) });
     if (emitHex) { m.emissive = new THREE.Color(emitHex); m.emissiveIntensity = 0.55; }
     return m;
   };
@@ -1336,11 +1384,15 @@ const MonsterRenderer = (() => {
     _renderer.setSize(realW, realH, false);
     _renderer.setClearColor(0x000000, 0);
 
-    _scene.add(new THREE.AmbientLight(0x88ccaa, 0.8));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+    _scene.add(new THREE.AmbientLight(0x88ccaa, 0.6));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
     sun.position.set(3, 8, 5); _scene.add(sun);
-    const fill = new THREE.DirectionalLight(0x44ff88, 0.35);
+    const fill = new THREE.DirectionalLight(0x44ff88, 0.4);
     fill.position.set(-4, 2, -2); _scene.add(fill);
+    const rim = new THREE.DirectionalLight(0xaaffdd, 0.3);
+    rim.position.set(0, -2, -4); _scene.add(rim);
+    const top = new THREE.PointLight(0xffffff, 0.5, 10);
+    top.position.set(0, 5, 2); _scene.add(top);
 
     _monster = _build(monsterId);
     _monster.position.set(0, 0.4, 0);
@@ -2305,6 +2357,13 @@ const UI = (() => {
     el._timer = setTimeout(() => el.classList.remove('show'), 2800);
   }
 
+  function confirmReset() {
+    if (confirm('Start over? All progress will be lost.')) {
+      State.resetSave();
+      location.reload();
+    }
+  }
+
   return {
     showScreen, setBattleUI: _setBattleUI,
     openBattle, openGarden, openInventory, closeToHub, exitBattle,
@@ -2364,6 +2423,7 @@ const Game = (() => {
 
   function nextEncounter() {
     State.get().encounterCount++;
+    State.saveNow();
     MonsterRenderer.dispose();
     UI.showScreen('screen-battle');
     UI.setBattleUI(true);
