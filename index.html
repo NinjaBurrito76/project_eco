@@ -8,8 +8,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Eco Guardian</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
 /* ============================================================
    style.css — Eco Guardian  (mobile-first)
@@ -673,8 +671,6 @@ html, body {
 #guardian-bottom-row { display: flex; align-items: center; gap: 6px; margin-top: 1px; }
 #guardian-level-tag { font-size: 0.58rem; color: var(--c-amber); }
 #guardian-name { font-size: 0.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; }
-.a-enter-vr, .a-orientation-modal, .a-loader-title { display: none !important; }
-a-scene { display: none !important; }
   </style>
 </head>
 <body>
@@ -731,7 +727,7 @@ a-scene { display: none !important; }
         <div class="tutorial-step-num">4</div>
         <div class="tutorial-step-body">
           <div class="tutorial-step-title">Battle in AR!</div>
-          <div class="tutorial-step-desc">Enemy floats in AR by default. Point at a printed Hiro marker to place both fighters on a surface!</div>
+          <div class="tutorial-step-desc">Point at a printed Hiro marker — both fighters appear on the surface facing each other!</div>
         </div>
         <div class="tutorial-step-icon">🌍</div>
       </div>
@@ -762,13 +758,12 @@ a-scene { display: none !important; }
     </div>
   </div>
 
+  <!-- Battle screen kept for fallback / result display -->
   <div id="screen-battle" class="screen">
-    <video id="ar-camera" autoplay playsinline muted></video>
+    <video id="ar-camera" autoplay playsinline muted style="display:none"></video>
     <div id="ar-bg-overlay"></div>
     <div id="enemy-stage">
-      <div id="enemy-model-wrap">
-        <canvas id="monster-canvas"></canvas>
-      </div>
+      <div id="enemy-model-wrap"><canvas id="monster-canvas"></canvas></div>
       <div id="enemy-shadow"></div>
       <div id="enemy-name-tag"></div>
     </div>
@@ -2012,17 +2007,52 @@ const UI = (() => {
 const Game = (() => {
 
   let _cameraStream = null;
-  let _markerActive = false;
 
   function _enemyLevel() {
     return Math.min(10, 1 + Math.floor(State.get().encounterCount / 5));
   }
 
   function startGame() {
+    // Check if returning from AR battle
+    const params = new URLSearchParams(location.search);
+    if (params.get('result')) {
+      _handleBattleReturn(params.get('result'));
+      // Clean URL
+      history.replaceState({}, '', location.pathname);
+    }
+
     if (!State.get().tutorialDone) {
       UI.showScreen('screen-tutorial');
     } else {
       UI.showScreen('screen-hub');
+    }
+  }
+
+  function _handleBattleReturn(outcome) {
+    const data = JSON.parse(sessionStorage.getItem('battleResult') || '{}');
+    sessionStorage.removeItem('battleResult');
+
+    if (!data.drops) return;
+
+    // Apply drops
+    for (const d of data.drops) {
+      State.addItem(d.itemId, d.qty);
+      if (DATA.items[d.itemId]?.type === 'seed') State.addSeed(d.itemId);
+    }
+
+    // Update guardian HP
+    const g = State.getActiveGuardian();
+    if (g && data.guardianHp !== undefined) {
+      g.currentHp = Math.max(0, data.guardianHp);
+      if (outcome === 'victory' || outcome === 'capture') g.healFull();
+    }
+
+    // Increment encounter
+    if (outcome !== 'exit') State.get().encounterCount++;
+
+    // Show result screen
+    if (outcome !== 'exit') {
+      setTimeout(() => UI.showResult(outcome, data.drops, { name: 'Pitcher-Knight', monsterId: 'pitcher_knight' }), 100);
     }
   }
 
@@ -2039,135 +2069,47 @@ const Game = (() => {
       UI.toast('🌱 Hatch your seed first! Use your 3 💧 Water.');
       return;
     }
-    _startCamera().then(() => {
-      UI.showScreen('screen-battle');
-      UI.setBattleUI(true);
-      setTimeout(() => {
-        _newEncounter();
-        _setupMarker();
-      }, 150);
-    });
+
+    // Save guardian data for AR page
+    const g = State.getActiveGuardian();
+    sessionStorage.setItem('activeGuardian', JSON.stringify({
+      name: g.name, icon: g.icon, level: g.level,
+      currentHp: g.currentHp, maxHp: g.maxHp,
+      attack: g.attack, defense: g.defense,
+    }));
+
+    // Navigate to AR battle page
+    location.href = `eco-guardian-ar.html?level=${_enemyLevel()}`;
   }
 
   function exitBattle() {
     MonsterRenderer.dispose();
     _stopCamera();
-    _teardownMarker();
     UI.setBattleUI(false);
     UI.showScreen('screen-hub');
   }
 
   function nextEncounter() {
-    State.get().encounterCount++;
-    MonsterRenderer.dispose();
-    UI.showScreen('screen-battle');
-    UI.setBattleUI(true);
-    setTimeout(_newEncounter, 150);
+    // Go to AR page again for next encounter
+    enterBattle();
   }
 
-  function _newEncounter() {
-    const pool = ['pitcher_knight'];
-    const pick = pool[Math.floor(Math.random() * pool.length)];
-    Battle.start(pick, _enemyLevel());
-  }
-
-  // ── Camera (our own stream for floating mode) ─────────────
   async function _startCamera() {
     _stopCamera();
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
+        video: { facingMode: { ideal: 'environment' } }, audio: false,
       });
       _cameraStream = stream;
       const vid = document.getElementById('ar-camera');
-      if (vid) {
-        vid.srcObject = stream;
-        vid.style.display = 'block';
-        await vid.play();
-      }
-    } catch (e) {
-      console.warn('Camera unavailable:', e.message);
-    }
+      if (vid) { vid.srcObject = stream; vid.style.display = 'block'; await vid.play(); }
+    } catch (e) { console.warn('Camera:', e.message); }
   }
 
   function _stopCamera() {
-    if (_cameraStream) {
-      _cameraStream.getTracks().forEach(t => t.stop());
-      _cameraStream = null;
-    }
+    if (_cameraStream) { _cameraStream.getTracks().forEach(t => t.stop()); _cameraStream = null; }
     const vid = document.getElementById('ar-camera');
     if (vid) { vid.srcObject = null; vid.style.display = 'none'; }
-  }
-
-  // ── Marker setup ──────────────────────────────────────────
-  // Key insight: AR.js needs exclusive camera access.
-  // We stop our stream, let AR.js take the camera, then resume ours when marker lost.
-  function _setupMarker() {
-    if (typeof AFRAME === 'undefined') {
-      // Retry until A-Frame loads
-      setTimeout(_setupMarker, 800);
-      return;
-    }
-    _teardownMarker();
-
-    const scene = document.createElement('a-scene');
-    scene.id = 'ar-scene';
-    scene.setAttribute('embedded', '');
-    scene.setAttribute('arjs', [
-      'sourceType: webcam',
-      'debugUIEnabled: false',
-      'patternRatio: 0.75',
-      'trackingMethod: best',
-    ].join('; '));
-    scene.setAttribute('vr-mode-ui', 'enabled: false');
-    scene.setAttribute('renderer', 'logarithmicDepthBuffer: true; alpha: true;');
-    // Hidden by default — only shown when marker scanning
-    scene.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;display:none;';
-
-    const marker = document.createElement('a-marker');
-    marker.id = 'ar-marker';
-    marker.setAttribute('preset', 'hiro');
-    marker.setAttribute('emitevents', 'true');
-    scene.appendChild(marker);
-
-    const cam = document.createElement('a-entity');
-    cam.setAttribute('camera', '');
-    scene.appendChild(cam);
-
-    document.body.appendChild(scene);
-
-    scene.addEventListener('loaded', () => {
-      console.log('AR.js scene loaded');
-
-      marker.addEventListener('markerFound', () => {
-        if (_markerActive) return;
-        _markerActive = true;
-
-        // Stop our camera, let AR.js use it — show AR scene as background
-        _stopCamera();
-        scene.style.display = 'block';
-
-        MonsterRenderer.onMarkerFound();
-      });
-
-      marker.addEventListener('markerLost', () => {
-        if (!_markerActive) return;
-        _markerActive = false;
-
-        // Hide AR scene, restart our camera
-        scene.style.display = 'none';
-        _startCamera();
-
-        MonsterRenderer.onMarkerLost();
-      });
-    });
-  }
-
-  function _teardownMarker() {
-    _markerActive = false;
-    const old = document.getElementById('ar-scene');
-    if (old) old.remove();
   }
 
   return { startGame, finishTutorial, enterBattle, exitBattle, nextEncounter };
@@ -2178,7 +2120,6 @@ const Game = (() => {
       document.querySelector(`#detail-tabs [data-tab="${tab}"]`)?.classList.add('active');
       document.getElementById(`detail-tab-${tab}`)?.classList.add('active');
     };
-    window.addEventListener('resize', () => MonsterRenderer.resize());
   </script>
 </body>
 </html>

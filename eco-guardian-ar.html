@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>Eco Guardian AR</title>
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { overflow: hidden; font-family: system-ui, sans-serif; }
+
+    /* A-Frame fills the whole screen */
+    a-scene { width:100vw; height:100vh; }
+    .a-enter-vr, .a-orientation-modal { display:none !important; }
+
+    /* HUD overlay on top of AR */
+    #hud {
+      position: fixed; inset: 0; z-index: 999;
+      pointer-events: none;
+      display: flex; flex-direction: column;
+    }
+
+    /* Top bar */
+    #hud-top {
+      pointer-events: all;
+      display: flex; align-items: center; gap: 10px;
+      padding: env(safe-area-inset-top, 10px) 12px 10px;
+      background: #0a1a0fdd;
+      border-bottom: 1px solid #2a5a38;
+    }
+    #btn-exit {
+      width:36px; height:36px; border-radius:50%;
+      background:#00000060; border:1px solid #ffffff40;
+      color:#fff; font-size:0.9rem; cursor:pointer;
+      flex-shrink:0;
+    }
+    .enemy-block { flex:1; display:flex; flex-direction:column; gap:4px; }
+    #enemy-name  { font-size:0.8rem; font-weight:700; color:#d4f0dc; }
+    .hp-row      { display:flex; align-items:center; gap:6px; }
+    .hp-label    { font-size:0.6rem; color:#7aab8a; min-width:16px; }
+    .hp-track    { flex:1; height:8px; background:#0a2010; border-radius:10px; overflow:hidden; }
+    .hp-fill     { height:100%; border-radius:10px; transition:width 0.4s; }
+    .hp-fill.enemy    { background: linear-gradient(90deg,#c03030,#e05050); }
+    .hp-fill.guardian { background: linear-gradient(90deg,#1a4a2e,#4aab68); }
+    .hp-num      { font-size:0.62rem; color:#7aab8a; min-width:44px; text-align:right; }
+    #turn-badge  {
+      padding:5px 10px; background:#1a4a2e;
+      border:1px solid #4aab68; border-radius:20px;
+      font-size:0.6rem; font-weight:800; letter-spacing:0.12em; color:#4aab68;
+    }
+
+    /* Marker hint */
+    #marker-hint {
+      flex:1; display:flex; align-items:center; justify-content:center;
+      pointer-events:none;
+    }
+    #marker-hint-text {
+      background:#0a1a0faa; border:1px solid #2a5a38;
+      color:#7aab8a; font-size:0.75rem; padding:8px 16px;
+      border-radius:20px; backdrop-filter:blur(4px);
+      transition: opacity 0.4s;
+    }
+    #marker-hint-text.hidden { opacity:0; }
+
+    /* Guardian panel bottom */
+    #hud-bottom {
+      pointer-events: all;
+      background: #0a1a0f;
+      border-top: 1px solid #2a5a38;
+    }
+    #guardian-row {
+      display:flex; align-items:center; gap:10px;
+      padding:8px 12px; border-bottom:1px solid #1a3a22;
+    }
+    #guardian-sprite { font-size:1.8rem; flex-shrink:0; }
+    #guardian-info   { flex:1; display:flex; flex-direction:column; gap:3px; }
+    #guardian-name   { font-size:0.72rem; font-weight:700; color:#d4f0dc; }
+    #guardian-sub    { display:flex; gap:6px; align-items:center; }
+    #guardian-lv     { font-size:0.58rem; color:#c8a060; }
+    #guardian-hpnum  { font-size:0.58rem; color:#7aab8a; }
+    #log-box  { padding:6px 12px; }
+    #log-text { font-size:0.7rem; color:#7aab8a; line-height:1.4; }
+    #btn-row  {
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:8px; padding:10px 12px env(safe-area-inset-bottom, 10px);
+    }
+    .btn-action {
+      padding:16px 8px; background:#162d1c;
+      border:1px solid #2a5a38; border-radius:12px;
+      color:#d4f0dc; font-size:0.88rem; font-weight:700;
+      cursor:pointer; min-height:54px;
+    }
+    .btn-action:active { background:#1a4a2e; transform:scale(0.96); }
+    .btn-action:disabled { opacity:0.35; }
+
+    #toast {
+      position:fixed; bottom:120px; left:50%;
+      transform:translateX(-50%) translateY(16px);
+      background:#1a4a2eee; border:1px solid #4aab68;
+      border-radius:24px; padding:10px 20px;
+      font-size:0.8rem; color:#d4f0dc; opacity:0;
+      transition:opacity 0.22s, transform 0.22s;
+      pointer-events:none; z-index:1000; max-width:85vw;
+      text-align:center; backdrop-filter:blur(8px);
+    }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<!-- AR.js owns the full scene — Hiro marker triggers monster -->
+<a-scene
+  embedded
+  arjs="sourceType: webcam; debugUIEnabled: false; patternRatio: 0.75; trackingMethod: best;"
+  vr-mode-ui="enabled: false"
+  renderer="logarithmicDepthBuffer: true; alpha: true;">
+
+  <!-- Hiro marker — monster appears here -->
+  <a-marker id="main-marker" preset="hiro" emitevents="true">
+
+    <!-- Enemy Pitcher-Knight (red eyes) -->
+    <a-entity id="enemy-entity" position="0.6 0 0" rotation="0 -90 0" scale="0.5 0.5 0.5">
+      <!-- Shadow -->
+      <a-circle radius="0.55" rotation="-90 0 0" position="0 0.01 0"
+        material="color:#000;opacity:0.3;transparent:true"></a-circle>
+      <!-- Feet -->
+      <a-sphere position="-0.22 0.04 0.07" radius="0.13" material="color:#4a3820"></a-sphere>
+      <a-sphere position="0.22 0.04 0.07"  radius="0.13" material="color:#4a3820"></a-sphere>
+      <!-- Legs -->
+      <a-cylinder position="-0.22 0.26 0" radius="0.10" height="0.42" material="color:#8b7040"></a-cylinder>
+      <a-cylinder position="0.22 0.26 0"  radius="0.10" height="0.42" material="color:#8b7040"></a-cylinder>
+      <!-- Body -->
+      <a-cylinder position="0 0.72 0" radius-top="0.25" radius-bottom="0.30" height="0.62"
+        material="color:#1a5c35" segments-radial="12"></a-cylinder>
+      <a-torus position="0 0.47 0" radius="0.27" radius-tubular="0.026" material="color:#2e7d4f"></a-torus>
+      <a-torus position="0 0.63 0" radius="0.27" radius-tubular="0.026" material="color:#2e7d4f"></a-torus>
+      <a-torus position="0 0.79 0" radius="0.27" radius-tubular="0.026" material="color:#2e7d4f"></a-torus>
+      <a-torus position="0 1.03 0" radius="0.26" radius-tubular="0.042" material="color:#3a6e4e"></a-torus>
+      <a-circle radius="0.20" rotation="-90 0 0" position="0 1.05 0"
+        material="color:#0d3d22;opacity:0.9"></a-circle>
+      <!-- Pauldrons -->
+      <a-sphere position="-0.44 0.94 0" radius="0.17" scale="1 0.72 0.9" material="color:#8b7040"></a-sphere>
+      <a-sphere position="0.44 0.94 0"  radius="0.17" scale="1 0.72 0.9" material="color:#8b7040"></a-sphere>
+      <!-- Arms & fists -->
+      <a-cylinder position="-0.52 0.68 0" radius="0.08" height="0.48" rotation="0 0 30" material="color:#8b7040"></a-cylinder>
+      <a-cylinder position="0.52 0.68 0"  radius="0.08" height="0.48" rotation="0 0 -30" material="color:#8b7040"></a-cylinder>
+      <a-sphere position="-0.74 0.50 0" radius="0.13" material="color:#1a5c35"></a-sphere>
+      <a-sphere position="0.74 0.50 0"  radius="0.13" material="color:#1a5c35"></a-sphere>
+      <!-- Helmet -->
+      <a-sphere position="0 1.16 0" radius="0.30"
+        phi-start="0" phi-length="360" theta-start="0" theta-length="120"
+        material="color:#8b7040" segments-height="8" segments-width="12"></a-sphere>
+      <a-cylinder position="0 1.08 0" radius="0.34" height="0.06" material="color:#4a3820" segments-radial="14"></a-cylinder>
+      <!-- Eyes (red) -->
+      <a-sphere position="-0.11 1.07 0.24" radius="0.072"
+        material="color:#ff6b35;emissive:#ff3300;emissiveIntensity:0.7"></a-sphere>
+      <a-sphere position="0.11 1.07 0.24"  radius="0.072"
+        material="color:#ff6b35;emissive:#ff3300;emissiveIntensity:0.7"></a-sphere>
+      <a-sphere position="-0.11 1.07 0.30" radius="0.036" material="color:#110500"></a-sphere>
+      <a-sphere position="0.11 1.07 0.30"  radius="0.036" material="color:#110500"></a-sphere>
+      <!-- Idle float animation -->
+      <a-animation attribute="position" from="0.6 0.05 0" to="0.6 0.18 0"
+        dur="1800" direction="alternate" repeat="indefinite" easing="easeInOutSine"></a-animation>
+    </a-entity>
+
+    <!-- Guardian Pitcher-Knight (blue eyes) -->
+    <a-entity id="guardian-entity" position="-0.6 0 0" rotation="0 90 0" scale="0.5 0.5 0.5">
+      <!-- Shadow -->
+      <a-circle radius="0.55" rotation="-90 0 0" position="0 0.01 0"
+        material="color:#000;opacity:0.3;transparent:true"></a-circle>
+      <!-- Feet -->
+      <a-sphere position="-0.22 0.04 0.07" radius="0.13" material="color:#303848"></a-sphere>
+      <a-sphere position="0.22 0.04 0.07"  radius="0.13" material="color:#303848"></a-sphere>
+      <!-- Legs -->
+      <a-cylinder position="-0.22 0.26 0" radius="0.10" height="0.42" material="color:#607080"></a-cylinder>
+      <a-cylinder position="0.22 0.26 0"  radius="0.10" height="0.42" material="color:#607080"></a-cylinder>
+      <!-- Body -->
+      <a-cylinder position="0 0.72 0" radius-top="0.25" radius-bottom="0.30" height="0.62"
+        material="color:#1a4a6e" segments-radial="12"></a-cylinder>
+      <a-torus position="0 0.47 0" radius="0.27" radius-tubular="0.026" material="color:#2e6d8f"></a-torus>
+      <a-torus position="0 0.63 0" radius="0.27" radius-tubular="0.026" material="color:#2e6d8f"></a-torus>
+      <a-torus position="0 0.79 0" radius="0.27" radius-tubular="0.026" material="color:#2e6d8f"></a-torus>
+      <a-torus position="0 1.03 0" radius="0.26" radius-tubular="0.042" material="color:#2e6d8f"></a-torus>
+      <a-circle radius="0.20" rotation="-90 0 0" position="0 1.05 0"
+        material="color:#0d2233;opacity:0.9"></a-circle>
+      <!-- Pauldrons -->
+      <a-sphere position="-0.44 0.94 0" radius="0.17" scale="1 0.72 0.9" material="color:#607080"></a-sphere>
+      <a-sphere position="0.44 0.94 0"  radius="0.17" scale="1 0.72 0.9" material="color:#607080"></a-sphere>
+      <!-- Arms & fists -->
+      <a-cylinder position="-0.52 0.68 0" radius="0.08" height="0.48" rotation="0 0 30" material="color:#607080"></a-cylinder>
+      <a-cylinder position="0.52 0.68 0"  radius="0.08" height="0.48" rotation="0 0 -30" material="color:#607080"></a-cylinder>
+      <a-sphere position="-0.74 0.50 0" radius="0.13" material="color:#1a4a6e"></a-sphere>
+      <a-sphere position="0.74 0.50 0"  radius="0.13" material="color:#1a4a6e"></a-sphere>
+      <!-- Helmet -->
+      <a-sphere position="0 1.16 0" radius="0.30"
+        phi-start="0" phi-length="360" theta-start="0" theta-length="120"
+        material="color:#607080" segments-height="8" segments-width="12"></a-sphere>
+      <a-cylinder position="0 1.08 0" radius="0.34" height="0.06" material="color:#303848" segments-radial="14"></a-cylinder>
+      <!-- Eyes (blue) -->
+      <a-sphere position="-0.11 1.07 0.24" radius="0.072"
+        material="color:#88ddff;emissive:#44aaff;emissiveIntensity:0.7"></a-sphere>
+      <a-sphere position="0.11 1.07 0.24"  radius="0.072"
+        material="color:#88ddff;emissive:#44aaff;emissiveIntensity:0.7"></a-sphere>
+      <a-sphere position="-0.11 1.07 0.30" radius="0.036" material="color:#001122"></a-sphere>
+      <a-sphere position="0.11 1.07 0.30"  radius="0.036" material="color:#001122"></a-sphere>
+      <!-- Idle float animation (offset timing) -->
+      <a-animation attribute="position" from="-0.6 0.08 0" to="-0.6 0.20 0"
+        dur="2000" direction="alternate" repeat="indefinite" easing="easeInOutSine"></a-animation>
+    </a-entity>
+
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="hud-top">
+    <button id="btn-exit" onclick="exitAR()">✕</button>
+    <div class="enemy-block">
+      <div id="enemy-name">Pitcher-Knight Lv1</div>
+      <div class="hp-row">
+        <span class="hp-label">HP</span>
+        <div class="hp-track"><div class="hp-fill enemy" id="enemy-hp" style="width:100%"></div></div>
+        <span class="hp-num" id="enemy-hp-num">50/50</span>
+      </div>
+    </div>
+    <div id="turn-badge">YOUR TURN</div>
+  </div>
+
+  <div id="marker-hint">
+    <div id="marker-hint-text">🎯 Point at Hiro marker to place fighters</div>
+  </div>
+
+  <div id="hud-bottom">
+    <div id="guardian-row">
+      <div id="guardian-sprite">🌿</div>
+      <div id="guardian-info">
+        <div id="guardian-name">No Guardian</div>
+        <div id="guardian-sub">
+          <span id="guardian-lv">Lv —</span>
+          <span id="guardian-hpnum">—</span>
+        </div>
+        <div class="hp-row">
+          <span class="hp-label">HP</span>
+          <div class="hp-track"><div class="hp-fill guardian" id="guardian-hp" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="log-box"><div id="log-text">Point camera at Hiro marker!</div></div>
+    <div id="btn-row">
+      <button class="btn-action" id="btn-attack"  onclick="doAttack()">⚔️ Attack</button>
+      <button class="btn-action" id="btn-capture" onclick="doCapture()">🌱 Capture</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Game state (passed from main game via URL params or sessionStorage) ──
+const params     = new URLSearchParams(location.search);
+const level      = parseInt(params.get('level') || '1');
+const guardianData = JSON.parse(sessionStorage.getItem('activeGuardian') || 'null');
+
+// ── Enemy stats ──
+const baseHp  = Math.round(50  * Math.pow(1.06, level - 1));
+const baseAtk = Math.round(8   * Math.pow(1.05, level - 1));
+const baseDef = Math.round(2   * Math.pow(1.04, level - 1));
+let enemyHp   = baseHp;
+
+// ── Guardian stats ──
+let gHp  = guardianData ? guardianData.currentHp  : 60;
+let gMax = guardianData ? guardianData.maxHp       : 60;
+let gAtk = guardianData ? guardianData.attack      : 8;
+let gDef = guardianData ? guardianData.defense     : 2;
+let gLv  = guardianData ? guardianData.level       : 1;
+let gName= guardianData ? guardianData.name        : 'Guardian';
+let gIcon= guardianData ? guardianData.icon        : '🌿';
+
+let playerTurn = true;
+let busy       = false;
+let markerSeen = false;
+
+// ── Init HUD ──
+document.getElementById('enemy-name').textContent    = `Pitcher-Knight Lv${level}`;
+document.getElementById('enemy-hp-num').textContent  = `${enemyHp}/${baseHp}`;
+document.getElementById('guardian-name').textContent = gName;
+document.getElementById('guardian-sprite').textContent = gIcon;
+document.getElementById('guardian-lv').textContent   = `Lv ${gLv}`;
+document.getElementById('guardian-hpnum').textContent = `${gHp}/${gMax}`;
+
+// ── Marker events ──
+const marker = document.getElementById('main-marker');
+marker.addEventListener('markerFound', () => {
+  markerSeen = true;
+  document.getElementById('marker-hint-text').classList.add('hidden');
+  log('Both fighters on the field! Your turn.');
+});
+marker.addEventListener('markerLost', () => {
+  document.getElementById('marker-hint-text').classList.remove('hidden');
+});
+
+// ── Battle logic ──
+function doAttack() {
+  if (!playerTurn || busy) return;
+  busy = true;
+
+  const dmg = Math.max(1, gAtk - baseDef + Math.floor(Math.random()*5) - 2);
+  enemyHp   = Math.max(0, enemyHp - dmg);
+  log(`${gName} attacks! Enemy takes ${dmg} damage.`);
+  updateEnemyHp();
+
+  if (enemyHp <= 0) { setTimeout(() => endBattle('victory'), 600); return; }
+
+  playerTurn = false;
+  setButtons(false);
+  setTimeout(enemyTurn, 900);
+}
+
+function doCapture() {
+  if (!playerTurn || busy) return;
+  busy = true;
+
+  const chance = Math.min(0.95, 0.55 * (1 - enemyHp/baseHp) * 2.2);
+  log(`You throw a seed net! (${Math.round(chance*100)}% chance…)`);
+
+  setTimeout(() => {
+    if (Math.random() < chance) {
+      log('Captured! Seed added.');
+      setTimeout(() => endBattle('capture'), 600);
+    } else {
+      log('It broke free!');
+      busy = false;
+      playerTurn = false;
+      setButtons(false);
+      setTimeout(enemyTurn, 800);
+    }
+  }, 1200);
+}
+
+function enemyTurn() {
+  const dmg = Math.max(1, baseAtk - gDef + Math.floor(Math.random()*5) - 2);
+  gHp = Math.max(0, gHp - dmg);
+  log(`Enemy attacks! ${gName} takes ${dmg} damage.`);
+  updateGuardianHp();
+
+  if (gHp <= 0) { log(`${gName} fainted!`); setTimeout(() => endBattle('defeat'), 800); return; }
+
+  playerTurn = true;
+  busy = false;
+  setButtons(true);
+}
+
+function endBattle(outcome) {
+  setButtons(false);
+
+  // Pass result back to main game via sessionStorage
+  const drops = rollDrops(outcome);
+  sessionStorage.setItem('battleResult', JSON.stringify({
+    outcome, drops,
+    guardianHp: gHp,
+    enemyLevel: level,
+  }));
+
+  // Go back to main game
+  location.href = 'index.html?result=' + outcome;
+}
+
+function rollDrops(outcome) {
+  const drops = [];
+  if (outcome === 'capture') {
+    drops.push({ itemId: 'seed_pitcher_knight', qty: 1 });
+  }
+  if (Math.random() < 0.80) drops.push({ itemId: 'water',    qty: Math.ceil(Math.random()*3) });
+  if (Math.random() < 0.50) drops.push({ itemId: 'sunlight', qty: 1 });
+  if (Math.random() < 0.35 && outcome !== 'capture') drops.push({ itemId: 'seed_pitcher_knight', qty: 1 });
+  return drops;
+}
+
+function exitAR() {
+  sessionStorage.setItem('battleResult', JSON.stringify({ outcome: 'exit', drops: [], guardianHp: gHp }));
+  location.href = 'index.html';
+}
+
+function updateEnemyHp() {
+  document.getElementById('enemy-hp').style.width = (enemyHp/baseHp*100) + '%';
+  document.getElementById('enemy-hp-num').textContent = `${enemyHp}/${baseHp}`;
+}
+function updateGuardianHp() {
+  document.getElementById('guardian-hp').style.width = (gHp/gMax*100) + '%';
+  document.getElementById('guardian-hpnum').textContent = `${gHp}/${gMax}`;
+}
+function setButtons(on) {
+  document.getElementById('btn-attack').disabled  = !on;
+  document.getElementById('btn-capture').disabled = !on;
+  document.getElementById('turn-badge').textContent = on ? 'YOUR TURN' : 'ENEMY TURN';
+}
+function log(msg) { document.getElementById('log-text').textContent = msg; }
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2600);
+}
+</script>
+</body>
+</html>
